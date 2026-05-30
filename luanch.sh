@@ -17,7 +17,7 @@ export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# 2. Cleanup
+# 2. Cleanup old directories before building
 rm -rf .repo/local_manifests/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
@@ -49,16 +49,40 @@ export KERNEL_SUPPORTS_KSU=true
 
 source build/envsetup.sh
 
-# 8. Clean up conflicts
-rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
+# 8. Clean up conflicts & Obsolete commands
+echo "Checking for git conflicts..."
+set +e # Temporarily disable 'set -e' so the script doesn't crash if no files are found
+
+# Check and fix merge conflicts safely
+CONF_FILES=$(rg -l '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb 2>/dev/null || true)
+if [ -n "$CONF_FILES" ]; then
+    echo "$CONF_FILES" | xargs sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
+    echo "Conflicts cleaned up successfully."
+else
+    echo "No conflicts found."
+fi
+
+# Fix obsolete lunch combo warning/error in Android 16+
+if [ -f "device/oneplus/hotdogb/vendorsetup.sh" ]; then
+    echo "Fixing obsolete add_lunch_combo in vendorsetup.sh..."
+    sed -i 's/^add_lunch_combo/# add_lunch_combo/g' device/oneplus/hotdogb/vendorsetup.sh
+fi
+
+set -e # Re-enable strict error checking
 
 # 9. Build process
 make installclean
 lunch aosp_hotdogb-trunk_staging-userdebug
 m pixelos -j$(nproc --all)
 
-# 10. Telegram Upload (অপ্টিমাইজড ও নিরাপদ করা হয়েছে)
-set +e # আপলোড সেকশনে এসে set -e সাময়িক বন্ধ করা হলো যাতে জিপ ফাইল না থাকলে স্ক্রিপ্ট ক্র্যাশ না করে
+# 10. Telegram Upload
+set +e # Safely handle upload logic without crashing if compilation fails
+
+# Re-activate virtual environment in case Crave sub-shell drops it
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+fi
+
 ZIP_FILE=$(ls out/target/product/hotdogb/PixelOS_*.zip 2>/dev/null | head -n 1)
 
 if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
