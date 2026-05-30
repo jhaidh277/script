@@ -70,9 +70,9 @@ fi
 
 set -e # Re-enable strict error checking
 
-# 9. Build process
+# 9. Build process 
 make installclean
-lunch aosp_hotdogb-trunk_staging-userdebug
+lunch pixelos_hotdogb-trunk_staging-userdebug
 m pixelos -j$(nproc --all)
 
 # 10. Telegram Upload
