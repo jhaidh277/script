@@ -1,44 +1,39 @@
 #!/bin/bash
 set -e
 
-# Start timer
-start=$(date +%s)
-
-# Update system and install dependencies
+# 1. System setup and dependencies
 sudo apt update
-sudo apt install patchelf ccache aria2 -y # Added aria2 for faster sync
+sudo apt install patchelf ccache aria2 python3-pip -y
+pip3 install telegram-upload
 mkdir -p tmp
 export CCACHE_DIR=tmp
 export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# Clean old directories
+# 2. Cleanup
 rm -rf .repo/local_manifests/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 
-# Repo initialization
+# 3. Repo initialization
 repo init -u https://github.com/PixelOS-AOSP/android_manifest.git -b sixteen-qpr2 --git-lfs --depth=1
 
-# Clone local manifest
+# 4. Local manifest clone
 git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
 
-# Source sync (Using --jobs for faster sync)
+# 5. Source sync
 repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 /opt/crave/resync.sh
 
-# Automate KernelSU integration
+# 6. KernelSU integration
 echo "Integrating KernelSU into the kernel source..."
 cd kernel/oneplus/sm8150
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 cd ../../
 
-# Add Dolby support (Example: Clone if not in manifest)
-# git clone https://github.com/your-dolby-repo hardware/dolby
-
-# Environment configuration
+# 7. Environment configuration
 export TARGET_RELEASE=trunk_staging
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
@@ -48,20 +43,24 @@ export KERNEL_SUPPORTS_KSU=true
 
 source build/envsetup.sh
 
-# Remove merge conflicts
+# 8. Clean up conflicts
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
 
-# Clean and Build
+# 9. Build process
 make installclean
 lunch aosp_hotdogb-trunk_staging-userdebug
-
-# Build with progress indicator
 m pixelos -j$(nproc --all)
 
-# Build Time End
-end=$(date +%s)
-echo "Build completed in $(( (end - start) / 60 )) minutes."
+# 10. Telegram Upload
+ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
 
-# Ccache status and upload
+if [ -f "$ZIP_FILE" ]; then
+    echo "Uploading build file to Telegram..."
+    telegram-upload --to "me" --caption "Build Completed for hotdogb! $(date)" "$ZIP_FILE"
+    echo "Upload finished successfully!"
+else
+    echo "Error: Build file not found."
+    exit 1
+fi
+
 ccache -s
-curl -sf https://raw.githubusercontent.com/jayz1212/build/refs/heads/main/tar.sh | bash
