@@ -3,7 +3,7 @@ set -e
 
 # 1. System setup and dependencies
 sudo apt update
-sudo apt install patchelf ccache aria2 python3-venv -y
+sudo apt install patchelf ccache aria2 python3-venv ripgrep -y
 
 # Setup Virtual Environment
 python3 -m venv venv
@@ -35,9 +35,9 @@ repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 
 # 6. KernelSU integration
 echo "Integrating KernelSU into the kernel source..."
-cd kernel/oneplus/sm8150
+pushd kernel/oneplus/sm8150
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
-cd ../../
+popd
 
 # 7. Environment configuration
 export TARGET_RELEASE=trunk_staging
@@ -57,15 +57,17 @@ make installclean
 lunch aosp_hotdogb-trunk_staging-userdebug
 m pixelos -j$(nproc --all)
 
-# 10. Telegram Upload
-ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
+# 10. Telegram Upload (অপ্টিমাইজড ও নিরাপদ করা হয়েছে)
+set +e # আপলোড সেকশনে এসে set -e সাময়িক বন্ধ করা হলো যাতে জিপ ফাইল না থাকলে স্ক্রিপ্ট ক্র্যাশ না করে
+ZIP_FILE=$(ls out/target/product/hotdogb/PixelOS_*.zip 2>/dev/null | head -n 1)
 
-if [ -f "$ZIP_FILE" ]; then
+if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
     echo "Uploading build file to Telegram..."
     telegram-upload --to "me" --caption "PixelOS Build Completed for hotdogb! $(date)" "$ZIP_FILE"
     echo "Upload finished successfully!"
 else
-    echo "Error: Build file not found."
+    echo "Error: Build failed or ZIP file not found in out/target/product/hotdogb/"
+    ccache -s
     exit 1
 fi
 
