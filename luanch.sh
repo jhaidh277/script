@@ -3,8 +3,14 @@ set -e
 
 # 1. System setup and dependencies
 sudo apt update
-sudo apt install patchelf ccache aria2 python3-pip -y
-pip3 install telegram-upload
+sudo apt install patchelf ccache aria2 python3-venv -y
+
+# Setup Virtual Environment
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install telegram-upload
+
 mkdir -p tmp
 export CCACHE_DIR=tmp
 export USE_CCACHE=1
@@ -56,7 +62,7 @@ ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
     echo "Uploading build file to Telegram..."
-    telegram-upload --to "me" --caption "Build Completed for hotdogb! $(date)" "$ZIP_FILE"
+    telegram-upload --to "me" --caption "PixelOS Build Completed for hotdogb! $(date)" "$ZIP_FILE"
     echo "Upload finished successfully!"
 else
     echo "Error: Build file not found."
