@@ -10,8 +10,7 @@ rm -rf .repo/local_manifests
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
 # 4. Clone and setup your custom local manifest
-git clone https://github.com/jhaidh277/ossop --depth 1 -b main .repo/local_manifests
-cp .repo/local_manifests/op.xml .repo/local_manifests/local_manifest.xml
+git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
 
 # 5. Sync the source code using Crave script
 /opt/crave/resync.sh
