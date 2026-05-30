@@ -1,32 +1,67 @@
 #!/bin/bash
+set -e
 
-# 1. System update and ccache installation
-sudo apt update && sudo apt install ccache -y
+# Start timer
+start=$(date +%s)
 
-# 2. Clean up any existing local manifests
-rm -rf .repo/local_manifests
+# Update system and install dependencies
+sudo apt update
+sudo apt install patchelf ccache aria2 -y # Added aria2 for faster sync
+mkdir -p tmp
+export CCACHE_DIR=tmp
+export USE_CCACHE=1
+ccache -M 50G
+ccache -s
 
-# 3. Initialize the ProjectInfinity-X Android 16 repository
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
+# Clean old directories
+rm -rf .repo/local_manifests/
+rm -rf device/oneplus/hotdogb
+rm -rf vendor/oneplus/hotdogb
+rm -rf kernel/oneplus/sm8150
 
-# 4. Clone and setup your custom local manifest
+# Repo initialization
+repo init -u https://github.com/PixelOS-AOSP/android_manifest.git -b sixteen-qpr2 --git-lfs --depth=1
+
+# Clone local manifest
 git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
 
-# 5. Sync the source code using Crave script
+# Source sync (Using --jobs for faster sync)
+repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 /opt/crave/resync.sh
 
-# 6. Modify the GSI Android.bp file to remove Calendar entry
-sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
+# Automate KernelSU integration
+echo "Integrating KernelSU into the kernel source..."
+cd kernel/oneplus/sm8150
+curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
+cd ../../
 
-# 7. Set up the build environment and select the device target
+# Add Dolby support (Example: Clone if not in manifest)
+# git clone https://github.com/your-dolby-repo hardware/dolby
+
+# Environment configuration
+export TARGET_RELEASE=trunk_staging
+export WITH_ADB_INSECURE=true
+export SELINUX_IGNORE_NEVERALLOWS=true
+export TARGET_GAPPS_PACKAGE_TYPE=none
+export TARGET_MULTISIM_CONFIG=dsds
+export KERNEL_SUPPORTS_KSU=true
+
 source build/envsetup.sh
-lunch infinity_hotdogb-userdebug
 
-# 8. Export KernelSU and Telephony configuration properties
-export WITH_KSU=true
-export KSU_SUPPORT=1
-export KSU_VERSION=11620
-export ADDITIONAL_BUILD_PROPERTIES="persist.radio.multisim.config=dsds telephony.lteOnCdmaDevice=1"
+# Remove merge conflicts
+rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
 
-# 9. Start the compilation
-m bacon
+# Clean and Build
+make installclean
+lunch aosp_hotdogb-trunk_staging-userdebug
+
+# Build with progress indicator
+m pixelos -j$(nproc --all)
+
+# Build Time End
+end=$(date +%s)
+echo "Build completed in $(( (end - start) / 60 )) minutes."
+
+# Ccache status and upload
+ccache -s
+curl -sf https://raw.githubusercontent.com/jayz1212/build/refs/heads/main/tar.sh | bash
