@@ -1,10 +1,14 @@
 #!/bin/bash
+
+# Exit immediately if a command exits with a non-zero status
 set -e
 
 # 1. System setup and dependencies
 sudo apt update
 sudo apt install patchelf ccache aria2 python3-pip -y
-pip3 install telegram-upload
+# pip3 এর মাধ্যমে প্যাকেজ ইনস্টল করার সময় --break-system-packages ব্যবহার করা হয়েছে
+pip3 install telegram-upload --break-system-packages
+
 mkdir -p tmp
 export CCACHE_DIR=tmp
 export USE_CCACHE=1
@@ -39,13 +43,13 @@ export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
-
 source build/envsetup.sh
 
 # 8. Modify the GSI Android.bp file to remove Calendar entry
 sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 
 # 9. Clean up conflicts
+# 'rg' ইনস্টল না থাকলে 'grep' ব্যবহার করতে হতে পারে, তবে 'rg' থাকলে এটি ঠিক আছে
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
 
 # 10. Build process
@@ -55,7 +59,6 @@ m bacon -j$(nproc --all)
 
 # 11. Telegram Upload
 ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
-
 if [ -f "$ZIP_FILE" ]; then
     echo "Uploading build file to Telegram..."
     telegram-upload --to "me" --caption "Infinity X Build Completed for hotdogb! $(date)" "$ZIP_FILE"
