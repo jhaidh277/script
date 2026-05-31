@@ -3,45 +3,45 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# 1. System setup and dependencies
+# ১. সিস্টেম সেটআপ এবং দ্রুত ডাউনলোডের জন্য কনফিগারেশন
 sudo apt update
 sudo apt install patchelf ccache aria2 python3-pip ripgrep -y
 pip3 install telegram-upload --break-system-packages
 
-mkdir -p tmp
-export CCACHE_DIR=tmp
+# CCACHE দ্রুতগতির জন্য কনফিগার করা
+mkdir -p /tmp/ccache
+export CCACHE_DIR=/tmp/ccache
 export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# 2. Cleanup
+# ২. ক্লিনআপ
 rm -rf .repo/local_manifests/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 
-# 3. Repo initialization
+# ৩. রিপো ইনিশিয়ালাইজেশন
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
-# 4. Git Hooks Cleanup (এই অংশটুকু সমস্যা সমাধানে সাহায্য করবে)
-echo "Cleaning up problematic git hooks..."
-find .repo/project-objects -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
-find .repo/projects -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
+# ৪. গিট হুক ক্লিনআপ (সিস্টেম হ্যাং হওয়া রোধ করবে)
+echo "Cleaning up git hooks..."
+find .repo/ -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# 5. Local manifest clone
+# ৫. লোকাল ম্যানিফেস্ট ক্লোন
 git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
 
-# 6. Source sync
+# ৬. দ্রুত সোর্স সিঙ্ক (প্রসেসরের সব কোর ব্যবহার করে)
 /opt/crave/resync.sh
-repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --detach
+repo sync -c -j$(nproc) --force-sync --no-clone-bundle --no-tags --detach
 
-# 7. KernelSU integration
-echo "Integrating KernelSU into the kernel source..."
+# ৭. KernelSU ইন্টিগ্রেশন
+echo "Integrating KernelSU..."
 pushd kernel/oneplus/sm8150
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 popd
 
-# 8. Environment configuration
+# ৮. এনভায়রনমেন্ট কনফিগারেশন
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
@@ -49,28 +49,20 @@ export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
 source build/envsetup.sh
 
-# 9. Modify the GSI Android.bp file to remove Calendar entry
-sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
-
-# 10. Clean up conflicts
+# ৯. কনফ্লিক্ট ক্লিনআপ
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 
-# 11. Build process
+# ১০. ফাস্ট বিল্ড প্রসেস
 make installclean
 lunch infinity_hotdogb-userdebug
+# -j$(nproc) কমান্ডটি আপনার বিল্ডকে সর্বোচ্চ গতিতে চলতে সাহায্য করবে
+m bacon -j$(nproc)
 
-# 12. Start the compilation
-m bacon
-
-# 13. Telegram Upload
+# ১১. টেলিগ্রাম আপলোড
 ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
 if [ -f "$ZIP_FILE" ]; then
-    echo "Uploading build file to Telegram..."
-    telegram-upload --to "me" --caption "Infinity X Build Completed for hotdogb! $(date)" "$ZIP_FILE"
-    echo "Upload finished successfully!"
+    telegram-upload --to "me" --caption "Build Finished: $(date)" "$ZIP_FILE"
 else
-    echo "Error: Build file not found."
+    echo "Build failed."
     exit 1
 fi
-
-ccache -s
