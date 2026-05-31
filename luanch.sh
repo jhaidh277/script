@@ -5,8 +5,7 @@ set -e
 
 # 1. System setup and dependencies
 sudo apt update
-sudo apt install patchelf ccache aria2 python3-pip -y
-# pip3 এর মাধ্যমে প্যাকেজ ইনস্টল করার সময় --break-system-packages ব্যবহার করা হয়েছে
+sudo apt install patchelf ccache aria2 python3-pip ripgrep -y
 pip3 install telegram-upload --break-system-packages
 
 mkdir -p tmp
@@ -24,20 +23,25 @@ rm -rf kernel/oneplus/sm8150
 # 3. Repo initialization
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
-# 4. Local manifest clone
+# 4. Git Hooks Cleanup (এই অংশটুকু সমস্যা সমাধানে সাহায্য করবে)
+echo "Cleaning up problematic git hooks..."
+find .repo/project-objects -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
+find .repo/projects -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# 5. Local manifest clone
 git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
 
-# 5. Source sync
-repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+# 6. Source sync
 /opt/crave/resync.sh
+repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --detach
 
-# 6. KernelSU integration
+# 7. KernelSU integration
 echo "Integrating KernelSU into the kernel source..."
 pushd kernel/oneplus/sm8150
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 popd
 
-# 7. Environment configuration
+# 8. Environment configuration
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
@@ -45,19 +49,20 @@ export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
 source build/envsetup.sh
 
-# 8. Modify the GSI Android.bp file to remove Calendar entry
+# 9. Modify the GSI Android.bp file to remove Calendar entry
 sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 
-# 9. Clean up conflicts
-# 'rg' ইনস্টল না থাকলে 'grep' ব্যবহার করতে হতে পারে, তবে 'rg' থাকলে এটি ঠিক আছে
-rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
+# 10. Clean up conflicts
+rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 
-# 10. Build process
+# 11. Build process
 make installclean
 lunch infinity_hotdogb-userdebug
-m bacon -j$(nproc --all)
 
-# 11. Telegram Upload
+# 12. Start the compilation
+m bacon
+
+# 13. Telegram Upload
 ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
 if [ -f "$ZIP_FILE" ]; then
     echo "Uploading build file to Telegram..."
