@@ -15,20 +15,19 @@ export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# 2. Clean up previous artifacts
-rm -rf .repo/local_manifests/
+# 2. Hard Clean: Remove everything to fix corrupted directories
+echo "Performing a deep clean..."
+rm -rf .repo/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 
-# 3. Repo initialization
+# 3. Repo initialization (Fresh start)
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
-# 4. Fix repo hooks and clean environment
-echo "Fixing repo hooks and cleaning environment..."
+# 4. Fix hooks and ensure directory structure exists
+echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
-find .repo/project-objects -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
-find .repo/projects -name "hooks" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # 5. Local manifest clone
 git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
