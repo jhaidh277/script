@@ -22,12 +22,15 @@ rm -rf .repo/local_manifests/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
+rm -rf hardware/oneplus
 
 # 3. Repo initialization
 repo init -u https://github.com/PixelOS-AOSP/android_manifest.git -b sixteen-qpr2 --git-lfs --depth=1
 
-# 4. Local manifest clone
-git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
+# 4. Local manifest download (image_13.png অনুযায়ী আপনার নিজস্ব রেপো থেকে ডাউনলোড)
+echo "Downloading your custom Android 16 manifest from hotdogb_local_manifest..."
+mkdir -p .repo/local_manifests
+curl -sL "https://raw.githubusercontent.com/jhaidh277/hotdogb_local_manifest/main/pixelos.xml" > .repo/local_manifests/hotdogb.xml
 
 # 5. Source sync
 repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
