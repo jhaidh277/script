@@ -29,9 +29,9 @@ repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 
 # 6. KernelSU integration
 echo "Integrating KernelSU into the kernel source..."
-cd kernel/oneplus/sm8150
+pushd kernel/oneplus/sm8150
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
-cd ../../
+popd
 
 # 7. Environment configuration
 export WITH_ADB_INSECURE=true
@@ -42,15 +42,18 @@ export KERNEL_SUPPORTS_KSU=true
 
 source build/envsetup.sh
 
-# 8. Clean up conflicts
+# 8. Modify the GSI Android.bp file to remove Calendar entry
+sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
+
+# 9. Clean up conflicts
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d'
 
-# 9. Build process
+# 10. Build process
 make installclean
 lunch infinity_hotdogb-userdebug
 m bacon -j$(nproc --all)
 
-# 10. Telegram Upload
+# 11. Telegram Upload
 ZIP_FILE=$(ls out/target/product/hotdogb/*.zip | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
