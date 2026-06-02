@@ -30,7 +30,7 @@ echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
 # 5. Local manifest clone
-git clone https://github.com/mdnoyon80123/hotdogb_local_manifest-j --depth 1 -b main .repo/local_manifests
+https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
 # 6. Source sync
 /opt/crave/resync.sh
