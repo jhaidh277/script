@@ -57,7 +57,6 @@ sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 
 # 11. Build process
-make installclean
 lunch infinity_hotdogb-userdebug
+make installclean
 m bacon -j$(nproc)
-
