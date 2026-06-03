@@ -3,6 +3,10 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# 1. System setup and dependencies
+sudo apt update -y
+sudo apt install patchelf ccache aria2 python3-pip ripgrep -y
+pip3 install telegram-upload --break-system-packages
 
 # CCACHE configuration
 mkdir -p /tmp/ccache
