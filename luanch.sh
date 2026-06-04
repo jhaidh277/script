@@ -21,9 +21,7 @@ rm -rf .repo/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
-#  Environment configuration
-# ভেন্ডর সেটআপ ফাইলটি পুরোপুরি বাদ দেওয়া হলো
-rm -f device/oneplus/hotdogb/vendorsetup.sh
+
 # 3. Repo initialization (Fresh start)
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
@@ -31,12 +29,18 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
-# 5. Local manifest clone (আপনার সঠিক রেপো এবং 'op' ব্রাঞ্চ এড করা হয়েছে)
+# 5. Local manifest clone
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
 # 6. Source sync
 /opt/crave/resync.sh
 repo sync -c -j$(nproc) --force-sync --no-clone-bundle --no-tags --detach
+
+# =====================================================================
+# 🛑 এখানে ভেন্ডর সেটআপ ফাইলটি ডিলিট করা হলো (সঠিক স্থান: repo sync এর পরে)
+# =====================================================================
+echo "Removing troublesome vendorsetup.sh to avoid duplicate clone loops..."
+rm -f device/oneplus/hotdogb/vendorsetup.sh
 
 # 7. KernelSU integration (সমস্যা সমাধান করতে এটিকে কমেন্ট আউট করা হলো)
 echo "Skipping manual KernelSU integration to avoid conflicts..."
