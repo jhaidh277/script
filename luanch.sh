@@ -21,7 +21,9 @@ rm -rf .repo/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
-
+#  Environment configuration
+# ভেন্ডর সেটআপ ফাইলটি পুরোপুরি বাদ দেওয়া হলো
+rm -f device/oneplus/hotdogb/vendorsetup.sh
 # 3. Repo initialization (Fresh start)
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
