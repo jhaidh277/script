@@ -15,12 +15,14 @@ export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# 2. Hard Clean: Remove everything to fix corrupted directories
+# 2. Hard Clean: Remove everything to fix corrupted directories and stuck cache
 echo "Performing a deep clean..."
 rm -rf .repo/
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
+rm -rf out/
+rm -rf .repo/local_manifests
 
 # 3. Repo initialization (Fresh start)
 repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
@@ -48,15 +50,21 @@ echo "Skipping manual KernelSU integration to avoid conflicts..."
 # curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 # popd
 
-# 8. Environment configuration
+# 8. Environment configuration & Stuck Cache Flush
+echo "Flushing old build variants and setting up environment..."
+# পুরোনো আটকে থাকা ভুল ভ্যারিয়েবলগুলো মুছে ফেলা হচ্ছে
+unset TARGET_PRODUCT
+unset TARGET_BUILD_VARIANT
+unset TARGET_RELEASE
+
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
 
-# 🛑 অ্যান্ড্রয়েড ১৬ ট্রাঙ্ক স্টেবল রিলিজ কনফিগ
-export TARGET_RELEASE=ap2a
+# 🛑 অ্যান্ড্রয়েড ১৬ কাস্টম রম স্ট্যান্ডার্ড রিলিজ ফ্ল্যাগস
+export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 
 source build/envsetup.sh
@@ -68,9 +76,12 @@ sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 
 # 11. Build process
+echo "Initializing fresh build target..."
+# সোং ক্যাশ ক্লিনের জন্য ক্লবার মেথড
+make clobber || true
 make installclean
 
-# 🛑 অ্যান্ড্রয়েড ১৬ কমপ্লায়েন্ট লাঞ্চ কমান্ড (প্রোডাক্ট-রিলিজ-বিল্ডটাইপ ফরম্যাট)
-lunch infinity_hotdogb-ap2a-userdebug
+# 🛑 কাস্টম রমের জন্য সঠিক ট্র্যাডিশনাল লাঞ্চ কমান্ড
+lunch infinity_hotdogb-userdebug
 
 m bacon -j$(nproc)
