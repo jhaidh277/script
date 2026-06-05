@@ -22,8 +22,8 @@ rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 
-# 3. Repo initialization (Fresh start)
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
+# 3. Repo initialization (Fresh start - Git LFS বাদ দেওয়া হয়েছে)
+repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
 # 4. Fix hooks and ensure directory structure exists
 echo "Ensuring repo directory structure..."
@@ -32,12 +32,12 @@ mkdir -p .repo/repo/hooks
 # 5. Local manifest clone
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
-# 6. Source sync
+# 6. Source sync (-j2 এবং --fail-fast যুক্ত করা হয়েছে সার্ভারের চাপ কমাতে)
 /opt/crave/resync.sh
-repo sync -c -j$(nproc) --force-sync --no-clone-bundle --no-tags --detach
+repo sync -c -j2 --fail-fast --force-sync --no-clone-bundle --no-tags --detach
 
 # =====================================================================
-# 🛑 এখানে ভেন্ডর সেটআপ ফাইলটি ডিলিট করা হলো (সঠিক স্থান: repo sync এর পরে)
+# 🛑 ভেন্ডর সেটআপ ফাইলটি ডিলিট করা হলো
 # =====================================================================
 echo "Removing troublesome vendorsetup.sh to avoid duplicate clone loops..."
 rm -f device/oneplus/hotdogb/vendorsetup.sh
