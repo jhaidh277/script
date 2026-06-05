@@ -22,7 +22,7 @@ rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 
-# 3. Repo initialization (Fresh start - Git LFS বাদ দেওয়া হয়েছে)
+# 3. Repo initialization (Fresh start)
 repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
 # 4. Fix hooks and ensure directory structure exists
@@ -32,7 +32,7 @@ mkdir -p .repo/repo/hooks
 # 5. Local manifest clone
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
-# 6. Source sync (-j2 এবং --fail-fast যুক্ত করা হয়েছে সার্ভারের চাপ কমাতে)
+# 6. Source sync
 /opt/crave/resync.sh
 repo sync -c -j2 --fail-fast --force-sync --no-clone-bundle --no-tags --detach
 
@@ -54,6 +54,11 @@ export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
+
+# 🛑 অ্যান্ড্রয়েড ১৬ ট্রাঙ্ক স্টেবল রিলিজ কনফিগ
+export TARGET_RELEASE=ap2a
+export ALLOW_MISSING_DEPENDENCIES=true
+
 source build/envsetup.sh
 
 # 9. Modify the GSI Android.bp file to remove Calendar entry
@@ -64,5 +69,8 @@ rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<
 
 # 11. Build process
 make installclean
-lunch infinity_hotdogb-userdebug
+
+# 🛑 অ্যান্ড্রয়েড ১৬ কমপ্লায়েন্ট লাঞ্চ কমান্ড (প্রোডাক্ট-রিলিজ-বিল্ডটাইপ ফরম্যাট)
+lunch infinity_hotdogb-ap2a-userdebug
+
 m bacon -j$(nproc)
