@@ -1,21 +1,22 @@
 #!/bin/bash
 
-# কোনো কমান্ড ফেইল করলে সাথে সাথে স্ক্রিপ্ট বন্ধ করার জন্য
+# Exit immediately if a command exits with a non-zero status
 set -e
 
-# ১. সিস্টেম সেটআপ এবং ডিপেনডেন্সি ইনস্টল
+# 1. System setup and dependencies
+echo "Installing system dependencies..."
 sudo apt update -y
 sudo apt install patchelf ccache aria2 python3-pip ripgrep -y
 pip3 install telegram-upload --break-system-packages
 
-# সিসিএশ (CCACHE) কনফিগারেশন
+# CCACHE configuration
 mkdir -p /tmp/ccache
 export CCACHE_DIR=/tmp/ccache
 export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# ২. স্মার্ট ক্লিন (ডিরেক্টরি করাপশন এবং আটকে থাকা মেমোরি ফিক্স)
+# 2. Smart Clean: Remove old build outputs and conflicting directories
 echo "Cleaning up build output and conflicting directories..."
 rm -rf out/
 rm -rf device/oneplus/hotdogb
@@ -23,33 +24,34 @@ rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 rm -rf .repo/local_manifests
 
-# ৩. রেপো ইনিশিয়ালাইজেশন (অফিশিয়াল ম্যানিফেস্ট অনুযায়ী)
+# 3. Repo initialization (Based on official manifest)
 if [ ! -d ".repo" ]; then
-    echo "Initializing repo for the first time..."
+    echo "Initializing repository for the first time..."
     repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 fi
 
-# ৪. হুক এবং ডিরেক্টরি স্ট্রাকচার ঠিক করা
+# 4. Fix hooks and ensure directory structure exists
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
-# ৫. লোকাল ম্যানিফেস্ট ক্লোন
+# 5. Local manifest clone
+echo "Cloning local manifest..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
-# ৬. সোর্স সিঙ্ক (ডেভস্পেস ফ্রেন্ডলি মেথড)
+# 6. Source sync (Devspace friendly method)
 echo "Syncing source code..."
 repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach
 
 # =====================================================================
-# ভেন্ডর সেটআপ ফাইল রিমুভ (লুপ এড়ানোর জন্য)
+# Remove vendorsetup.sh to avoid duplicate clone loops
 # =====================================================================
 echo "Removing troublesome vendorsetup.sh to avoid duplicate clone loops..."
 rm -f device/oneplus/hotdogb/vendorsetup.sh
 
-# ৭. কার্নেল-এসইউ ইন্টিগ্রেশন স্কিপ করা হলো
+# 7. KernelSU integration skipped to avoid conflicts
 echo "Skipping manual KernelSU integration to avoid conflicts..."
 
-# ৮. এনভায়রনমেন্ট ভ্যারিয়েবল সেটআপ
+# 8. Environment configuration & Stuck Cache Flush
 echo "Flushing old build variants and setting up environment..."
 unset TARGET_PRODUCT
 unset TARGET_BUILD_VARIANT
@@ -61,27 +63,29 @@ export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
 
-# অ্যান্ড্রয়েড ১৬ কাস্টম রম স্ট্যান্ডার্ড রিলিজ ফ্ল্যাগস (v3.11 ট্রাঙ্ক স্টেবল কমপ্লায়েন্ট)
+# Android 16 custom ROM standard release flags (v3.11 Trunk Stable compliant)
 export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 
 source build/envsetup.sh
 
-# Sign out form default target variables before lunch
+# Sign out from default target variables before lunch
 choosecombo userdebug infinity_hotdogb trunk_staging || true
 
-# ৯. জিএসআই অ্যান্ড্রয়েড ডট বিপি ফাইল মডিফাই
+# 9. Modify the GSI Android.bp file to remove Calendar entry
 if [ -f build/make/target/product/gsi/Android.bp ]; then
+    echo "Modifying GSI Android.bp file..."
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 fi
 
-# ১০. গิต কনফ্লিক্ট ক্লিন
+# 10. Clean up git merge conflicts if any
 if [ -d device/oneplus/hotdogb ]; then
+    echo "Cleaning up potential git conflicts..."
     rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 fi
 
 # =====================================================================
-# ভেন্ডর মেকফাইল হার্ড ফিক্স (Kati এরর এবং missing LOGO.img বাইপাস)
+# Vendor Makefile Hard Fix (Bypass Kati error and missing LOGO.img)
 # =====================================================================
 echo "Fixing vendor Android.mk to bypass Kati error..."
 if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
@@ -90,11 +94,13 @@ if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
     sed -i '/logo/d' vendor/oneplus/hotdogb/Android.mk
 fi
 
-# ১১. বিল্ড প্রসেস শুরু
+# 11. Build process start
 echo "Initializing fresh build target..."
 make installclean
 
-# ওয়ানপ্লাসের জন্য ডেডিকেটেড লাঞ্চ কমান্ড
+# Traditional lunch command for OnePlus 7T
+echo "Running lunch command..."
 lunch infinity_hotdogb-userdebug
 
+echo "Starting compilation with m bacon..."
 m bacon -j$(nproc)
