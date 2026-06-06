@@ -24,7 +24,7 @@ rm -rf kernel/oneplus/sm8150
 rm -rf out/
 rm -rf .repo/local_manifests
 
-# 3. Repo initialization (Fresh start)
+# 3. Repo initialization (Fresh start based on official manifest)
 repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 
 # 4. Fix hooks and ensure directory structure exists
@@ -52,7 +52,6 @@ echo "Skipping manual KernelSU integration to avoid conflicts..."
 
 # 8. Environment configuration & Stuck Cache Flush
 echo "Flushing old build variants and setting up environment..."
-# পুরোনো আটকে থাকা ভুল ভ্যারিয়েবলগুলো মুছে ফেলা হচ্ছে
 unset TARGET_PRODUCT
 unset TARGET_BUILD_VARIANT
 unset TARGET_RELEASE
@@ -63,7 +62,7 @@ export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
 
-# 🛑 অ্যান্ড্রয়েড ১৬ কাস্টম রম স্ট্যান্ডার্ড রিলিজ ফ্ল্যাগস
+# 🛑 অ্যান্ড্রয়েড ১৬ কাস্টม রম স্ট্যান্ডার্ড রিলিজ ফ্ল্যাগস (v3.11 ট্রাঙ্ক স্টেবল কমপ্লায়েন্ট)
 export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 
@@ -75,13 +74,22 @@ sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 # 10. Clean up conflicts
 rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 
+# =====================================================================
+# 🛑 ভেন্ডর মেকফাইল হার্ড ফিক্স (LOGO.img এবং radio Kati এরর বাইপাস)
+# =====================================================================
+echo "Clearing troublesome vendor Android.mk lines to bypass Kati error..."
+if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
+    sed -i '/radio/d' vendor/oneplus/hotdogb/Android.mk
+    sed -i '/LOGO/d' vendor/oneplus/hotdogb/Android.mk
+    sed -i '/logo/d' vendor/oneplus/hotdogb/Android.mk
+fi
+
 # 11. Build process
 echo "Initializing fresh build target..."
-# সোং ক্যাশ ক্লিনের জন্য ক্লবার মেথড
 make clobber || true
 make installclean
 
-# 🛑 কাস্টম রমের জন্য সঠিক ট্র্যাডিশনাল লাঞ্চ কমান্ড
+# 🛑 ওয়ানপ্লাসের জন্য স্ট্যান্ডার্ড লাঞ্চ কমান্ড
 lunch infinity_hotdogb-userdebug
 
 m bacon -j$(nproc)
