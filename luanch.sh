@@ -29,6 +29,7 @@ if [ ! -d ".repo" ]; then
     echo "Initializing repository for the first time..."
     repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 fi
+
 # 4. Fix hooks and ensure directory structure exists
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
