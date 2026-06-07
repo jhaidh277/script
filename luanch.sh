@@ -29,7 +29,6 @@ if [ ! -d ".repo" ]; then
     echo "Initializing repository for the first time..."
     repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 fi
-
 # 4. Fix hooks and ensure directory structure exists
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
@@ -37,6 +36,14 @@ mkdir -p .repo/repo/hooks
 # 5. Local manifest clone
 echo "Cloning local manifest..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
+
+# =====================================================================
+# 📸 OPLUS HARDWARE (ONEPLUS CAMERA DEPENDENCY) FORCE CLONE
+# This fixes: vendor.oplus.hardware.cameraMDM@2.0 missing dependency error
+# =====================================================================
+echo "Cloning OnePlus Oplus Camera Hardware Repo for Android 16..."
+rm -rf hardware/oplus
+git clone https://github.com/ProjectInfinity-X/android_hardware_oplus -b 16 hardware/oplus --depth 1
 
 # 6. Source sync (Devspace friendly method)
 echo "Syncing source code..."
@@ -51,7 +58,7 @@ rm -f device/oneplus/hotdogb/vendorsetup.sh
 # 7. KernelSU integration skipped to avoid conflicts
 echo "Skipping manual KernelSU integration to avoid conflicts..."
 
-# 8. Environment configuration & Stuck Cache Flush
+# 8. Environment configuration & OnePlus Camera Build Flags
 echo "Flushing old build variants and setting up environment..."
 unset TARGET_PRODUCT
 unset TARGET_BUILD_VARIANT
@@ -62,6 +69,14 @@ export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 export KERNEL_SUPPORTS_KSU=true
+
+# 🛑 OnePlus Camera Integration Flags
+export TARGET_USES_OPLUS_CAMERA=true
+export BOREALIS_CAMERA_BRAND=oneplus
+
+# 🛑 Exclude Default Infinity-X/AOSP Cameras
+export TARGET_EXCLUDE_AOSP_CAMERA=true
+export TARGET_EXCLUDE_APERTURE_CAMERA=true
 
 # Android 16 custom ROM standard release flags (v3.11 Trunk Stable compliant)
 export TARGET_RELEASE=trunk_staging
