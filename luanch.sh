@@ -6,8 +6,10 @@ set -e
 # 1. System setup and dependencies
 echo "Installing system dependencies..."
 sudo apt update -y
-sudo apt install patchelf ccache aria2 python3-pip ripgrep -y
-pip3 install telegram-upload --break-system-packages
+sudo apt install patchelf ccache aria2 python3-pip ripgrep pipx -y
+
+# Install telegram-upload cleanly using pipx or pip
+pip3 install telegram-upload --break-system-packages || pipx install telegram-upload
 
 # CCACHE configuration
 mkdir -p /tmp/ccache
@@ -16,9 +18,8 @@ export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# 2. Smart Clean: Remove old build outputs and conflicting directories
-echo "Cleaning up build output and conflicting directories..."
-rm -rf out/
+# 2. Smart Clean: Remove conflicting directories (Preserving 'out/' folder for faster build)
+echo "Cleaning up conflicting directories..."
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
@@ -34,19 +35,11 @@ fi
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
-# 5. Local manifest clone
+# 5. Local manifest clone (Downloads your updated roomservice.xml)
 echo "Cloning local manifest..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
-# =====================================================================
-# 📸 OPLUS HARDWARE (ONEPLUS CAMERA DEPENDENCY) FORCE CLONE
-# This fixes: vendor.oplus.hardware.cameraMDM@2.0 missing dependency error
-# =====================================================================
-echo "Cloning OnePlus Oplus Camera Hardware Repo for Android 16..."
-rm -rf hardware/oplus
-git clone https://github.com/ProjectInfinity-X/android_hardware_oplus -b 16 hardware/oplus --depth 1
-
-# 6. Source sync (Devspace friendly method)
+# 6. Source sync (All repos from your new local manifest will sync here)
 echo "Syncing source code..."
 repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach
 
@@ -83,10 +76,8 @@ export TARGET_EXCLUDE_APERTURE_CAMERA=true
 export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 
+# Load build environment
 source build/envsetup.sh
-
-# Sign out from default target variables before lunch
-choosecombo userdebug infinity_hotdogb trunk_staging || true
 
 # 9. Modify the GSI Android.bp file to remove Calendar entry
 if [ -f build/make/target/product/gsi/Android.bp ]; then
@@ -110,13 +101,12 @@ if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
     sed -i '/logo/d' vendor/oneplus/hotdogb/Android.mk
 fi
 
-# 11. Build process start
+# 11. Android 16 Trunk Staging Modern Lunch Command
+echo "Running lunch command for Android 16..."
+lunch infinity_hotdogb-trunk_staging-userdebug
+
 echo "Initializing fresh build target..."
 make installclean
-
-# Traditional lunch command for OnePlus 7T
-echo "Running lunch command..."
-lunch infinity_hotdogb-userdebug
 
 echo "Starting compilation with m bacon..."
 m bacon -j$(nproc)
