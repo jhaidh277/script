@@ -8,7 +8,7 @@ echo "Installing system dependencies..."
 sudo apt update -y
 sudo apt install patchelf ccache aria2 python3-pip ripgrep pipx -y
 
-# Install telegram-upload cleanly using pipx or pip
+# Install telegram-upload cleanly
 pip3 install telegram-upload --break-system-packages || pipx install telegram-upload
 
 # CCACHE configuration
@@ -18,82 +18,64 @@ export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# 2. Smart Clean: Remove conflicting directories (Preserving 'out/' folder for faster build)
+# 2. Smart Clean: Remove old build conflicting directories
 echo "Cleaning up conflicting directories..."
 rm -rf device/oneplus/hotdogb
+rm -rf device/oneplus/sm8150-common
+rm -rf vendor/oneplus/sm8150-common
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
+rm -rf hardware/oplus
 rm -rf .repo/local_manifests
 
 # 3. Repo initialization (Based on official manifest)
 if [ ! -d ".repo" ]; then
-    echo "Initializing repository for the first time..."
+    echo "Initializing ProjectInfinity-X repository..."
     repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 fi
 
-# 4. Fix hooks and ensure directory structure exists
-echo "Ensuring repo directory structure..."
-mkdir -p .repo/repo/hooks
-
-# 5. Local manifest clone (Downloads your updated roomservice.xml)
-echo "Cloning local manifest..."
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
-
-# 6. Source sync (All repos from your new local manifest will sync here)
-echo "Syncing source code..."
+# 4. Source sync (Only core ROM source sync)
+echo "Syncing core source code..."
 repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach
 
 # =====================================================================
-# Remove vendorsetup.sh to avoid duplicate clone loops
+# 🚀 DIRECT GIT CLONE METHOD (লোকাল ম্যানিফেস্ট ছাড়া সরাসরি গিট ক্লোন)
 # =====================================================================
-echo "Removing troublesome vendorsetup.sh to avoid duplicate clone loops..."
-rm -f device/oneplus/hotdogb/vendorsetup.sh
+echo "Cloning device, kernel, and vendor trees directly..."
 
-# 7. KernelSU integration skipped to avoid conflicts
-echo "Skipping manual KernelSU integration to avoid conflicts..."
+# Device Tree
+git clone https://github.com/jhaidh277/device_oneplus_hotdogb -b 16 device/oneplus/hotdogb --depth 1
 
-# 8. Environment configuration & OnePlus Camera Build Flags
-echo "Flushing old build variants and setting up environment..."
-unset TARGET_PRODUCT
-unset TARGET_BUILD_VARIANT
-unset TARGET_RELEASE
+# Common Device Tree
+git clone https://github.com/jhaidh277/android_device_oneplus_sm8150-common -b 16 device/oneplus/sm8150-common --depth 1
 
-export WITH_ADB_INSECURE=true
-export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=none
-export TARGET_MULTISIM_CONFIG=dsds
-export KERNEL_SUPPORTS_KSU=true
+# Kernel Source
+git clone https://github.com/jhaidh277/android_kernel_oneplus_sm8150 -b 16.0 kernel/oneplus/sm8150 --depth 1
 
-# 🛑 OnePlus Camera Integration Flags
-export TARGET_USES_OPLUS_CAMERA=true
-export BOREALIS_CAMERA_BRAND=oneplus
+# Vendor Common Source
+git clone https://github.com/jhaidh277/vendor_oneplus_sm8150-common -b 16 vendor/oneplus/sm8150-common --depth 1
 
-# 🛑 Exclude Default Infinity-X/AOSP Cameras
-export TARGET_EXCLUDE_AOSP_CAMERA=true
-export TARGET_EXCLUDE_APERTURE_CAMERA=true
+# Vendor Specific Tree
+git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_hotdogb -b lineage-22.1 vendor/oneplus/hotdogb --depth 1
 
-# Android 16 custom ROM standard release flags (v3.11 Trunk Stable compliant)
-export TARGET_RELEASE=trunk_staging
-export ALLOW_MISSING_DEPENDENCIES=true
+# Oplus Hardware Dependency (Public)
+git clone https://github.com/ProjectInfinity-X/android_hardware_oplus -b 15 hardware/oplus --depth 1 || git clone https://github.com/LineageOS/android_hardware_oplus -b lineage-22.1 hardware/oplus --depth 1
 
-# Load build environment
-source build/envsetup.sh
+# =====================================================================
+# 🛠️ CRITICAL FIXES (মেকফাইল এবং সোর্স কোড এরর অটো-ফিক্স)
+# =====================================================================
 
-# 9. Modify the GSI Android.bp file to remove Calendar entry
-if [ -f build/make/target/product/gsi/Android.bp ]; then
-    echo "Modifying GSI Android.bp file..."
-    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
+# ১. common_full_phone.mk missing error ফিক্স (আপনার স্ক্রিনশটের এরর)
+echo "Fixing common_full_phone.mk inheritance error..."
+if [ -f device/oneplus/hotdogb/lineage_hotdogb.mk ]; then
+    # যদি ফাইলটি থাকে, তবে ইনফিনিটি রমের আসল পাথের সাথে এটি রিপ্লেস করবে
+    sed -i 's|vendor/infinity/config/common_full_phone.mk|vendor/infinity/config/common.mk|g' device/oneplus/hotdogb/lineage_hotdogb.mk
 fi
 
-# 10. Clean up git merge conflicts if any
-if [ -d device/oneplus/hotdogb ]; then
-    echo "Cleaning up potential git conflicts..."
-    rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
-fi
+# ২. vendorsetup.sh রিমুভ করা লুপ এড়াতে
+rm -f device/oneplus/hotdogb/vendorsetup.sh || true
 
-# =====================================================================
-# Vendor Makefile Hard Fix (Bypass Kati error and missing LOGO.img)
-# =====================================================================
+# ৩. Vendor Makefile Hard Fix (Bypass Kati error)
 echo "Fixing vendor Android.mk to bypass Kati error..."
 if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
     sed -i '/radio/d' vendor/oneplus/hotdogb/Android.mk
@@ -101,9 +83,31 @@ if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
     sed -i '/logo/d' vendor/oneplus/hotdogb/Android.mk
 fi
 
-# 11. Android 16 Trunk Staging Modern Lunch Command
-echo "Running lunch command for Android 16..."
-lunch infinity_hotdogb-trunk_staging-userdebug
+# 5. Environment configuration & OnePlus Camera Build Flags
+echo "Setting up build environment..."
+export WITH_ADB_INSECURE=true
+export SELINUX_IGNORE_NEVERALLOWS=true
+export TARGET_GAPPS_PACKAGE_TYPE=none
+export TARGET_MULTISIM_CONFIG=dsds
+export KERNEL_SUPPORTS_KSU=true
+export TARGET_USES_OPLUS_CAMERA=true
+export BOREALIS_CAMERA_BRAND=oneplus
+export TARGET_EXCLUDE_AOSP_CAMERA=true
+export TARGET_EXCLUDE_APERTURE_CAMERA=true
+export TARGET_RELEASE=trunk_staging
+export ALLOW_MISSING_DEPENDENCIES=true
+
+# Load environment
+source build/envsetup.sh
+
+# 6. GSI Android.bp cleanup
+if [ -f build/make/target/product/gsi/Android.bp ]; then
+    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
+fi
+
+# 7. Lunch and Build Start
+echo "Running lunch command for Infinity-X..."
+lunch infinity_hotdogb-trunk_staging-userdebug || lunch infinity_hotdogb-userdebug
 
 echo "Initializing fresh build target..."
 make installclean
