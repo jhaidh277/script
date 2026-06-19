@@ -21,19 +21,7 @@ ccache -M 50G
 ccache -s
 
 # =====================================================================
-# ২. スマート ক্লিন: আগের কনফ্লিক্ট হওয়া ফোল্ডারগুলো মুছে ফেলা
-# =====================================================================
-echo "Cleaning up conflicting directories..."
-rm -rf device/oneplus/hotdogb
-rm -rf device/oneplus/sm8150-common
-rm -rf vendor/oneplus/sm8150-common
-rm -rf vendor/oneplus/hotdogb
-rm -rf kernel/oneplus/sm8150
-rm -rf hardware/oplus
-rm -rf .repo/local_manifests
-
-# =====================================================================
-# ৩. রেপো ইনিশিয়ালাইজেশন (ProjectInfinity-X Android 16)
+# ২. রেপো ইনিশিয়ালাইজেশন (ProjectInfinity-X Android 16)
 # =====================================================================
 if [ ! -d ".repo" ]; then
     echo "Initializing ProjectInfinity-X repository..."
@@ -41,10 +29,33 @@ if [ ! -d ".repo" ]; then
 fi
 
 # =====================================================================
+# ৩. রেপো ট্র্যাক থেকে কনফ্লিক্ট ফোল্ডারগুলো মুছে ফেলা (CRITICAL FIX)
+# =====================================================================
+echo "Removing conflicting projects from repo tracking to prevent checkout error..."
+rm -rf .repo/local_manifests
+rm -rf .repo/projects/device/oneplus/hotdogb.git || true
+rm -rf .repo/projects/device/oneplus/sm8150-common.git || true
+rm -rf .repo/projects/hardware/oplus.git || true
+
+# মূল সোর্স ডিরেক্টরিগুলো সম্পূর্ণ ক্লিন করা
+rm -rf device/oneplus/hotdogb
+rm -rf device/oneplus/sm8150-common
+rm -rf vendor/oneplus/sm8150-common
+rm -rf vendor/oneplus/hotdogb
+rm -rf kernel/oneplus/sm8150
+rm -rf hardware/oplus
+
+# =====================================================================
 # ৪. কোর সোর্স কোড সিঙ্ক
 # =====================================================================
 echo "Syncing core source code..."
-repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach
+# গিট চ্যাকাউট এরর এড়াতে এবং ফোর্স সিঙ্ক করতে ফ্ল্যাগ মডিফাই করা হয়েছে
+repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach || true
+
+# সেফটি মেজার: সিঙ্কের পর যদি কোনো ফোল্ডার আবার চলে আসে, সেগুলোকে পুনরায় ক্লিন করা
+rm -rf device/oneplus/hotdogb
+rm -rf device/oneplus/sm8150-common
+rm -rf hardware/oplus
 
 # =====================================================================
 # 🚀 সরাসরি গিট ক্লোন (Device, Kernel, and Vendor Trees)
@@ -77,7 +88,7 @@ echo "Applying deep fixes for device tree and vendor configs..."
 # গিট লক বা করাপ্টেড স্টেট পুরোপুরি ক্লিন করা
 rm -rf device/oneplus/hotdogb/.git
 
-# ফুল পাথ ভেরিয়েবল সেট করা (ডিরেক্টরি হারিয়ে যাওয়া রোধ করতে)
+# ফুল পাথ ভেরিয়েবল সেট করা
 DEV_TREE="device/oneplus/hotdogb"
 
 if [ -f "$DEV_TREE/lineage_hotdogb.mk" ]; then
@@ -93,25 +104,25 @@ if [ -f "$DEV_TREE/infinity_hotdogb.mk" ]; then
     echo "Checking core Infinity config file location..."
     
     if [ -f "vendor/infinity/config/common.mk" ]; then
-        CONF_PATH="vendor\/infinity\/config\/common.mk"
+        CONF_PATH="vendor/infinity/config/common.mk"
     elif [ -f "vendor/infinity/config/common_full_phone.mk" ]; then
-        CONF_PATH="vendor\/infinity\/config\/common_full_phone.mk"
+        CONF_PATH="vendor/infinity/config/common_full_phone.mk"
     elif [ -f "vendor/infinity/config/infinity.mk" ]; then
-        CONF_PATH="vendor\/infinity\/config\/infinity.mk"
+        CONF_PATH="vendor/infinity/config/infinity.mk"
     else
         DETECTED_MK=$(ls vendor/infinity/config/*.mk 2>/dev/null | head -n 1)
         if [ ! -z "$DETECTED_MK" ]; then
-            CONF_PATH=$(echo "$DETECTED_MK" | sed 's/\//\\\//g')
+            CONF_PATH="$DETECTED_MK"
         else
-            CONF_PATH="vendor\/infinity\/config\/common.mk"
+            CONF_PATH="vendor/infinity/config/common.mk"
         fi
     fi
     
     # সঠিক পাথটি মেকফাইলে পুশ করা
     echo "Setting config path to: $CONF_PATH"
-    sed -i "s|inherit-product, vendor/.*\.mk|inherit-product, $CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
     sed -i "s|vendor/infinity/config/common_full_phone.mk|$CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
     sed -i "s|vendor/lineage/config/common_full_phone.mk|$CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
+    sed -i "s|vendor/infinity/config/common.mk|$CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
 fi
 
 # ২. AndroidProducts.mk আপডেট
