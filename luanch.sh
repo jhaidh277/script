@@ -7,12 +7,17 @@ echo "=========================================================="
 echo "🚀 Starting Perfect & Safe Crave Build Script for OnePlus 7T"
 echo "=========================================================="
 
-# ১. CCACHE configuration
+# ১. CCACHE configuration (কমান্ড না থাকলে অটো স্কিপ করবে বা এনভায়রনমেন্ট সেট করবে)
 mkdir -p /tmp/ccache
 export CCACHE_DIR=/tmp/ccache
 export USE_CCACHE=1
-ccache -M 50G
-ccache -s
+
+if command -v ccache &> /dev/null; then
+    ccache -M 50G
+    ccache -s
+else
+    echo "⚠️ ccache not found in container, proceeding with default Android ccache..."
+fi
 
 # ২. Smart Clean: Remove old build outputs and conflicting directories
 echo "Cleaning up build output and conflicting directories..."
@@ -32,7 +37,7 @@ fi
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
-# ５. Local manifest clone (আপনার দেওয়া নতুন লিঙ্কটি এখানে যুক্ত করা হয়েছে)
+# ৫. Local manifest clone (আপনার দেওয়া লিঙ্কের সঠিক ওয়ান-লাইনার)
 echo "Cloning local manifest from your GitHub repository..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
