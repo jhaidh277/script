@@ -7,7 +7,7 @@ echo "=========================================================="
 echo "🚀 Starting Perfect & Safe Crave Build Script for OnePlus 7T"
 echo "=========================================================="
 
-# 1. CCACHE configuration (ccache না থাকলে অটো স্কিপ করবে)
+# 1. CCACHE configuration
 mkdir -p /tmp/ccache
 export CCACHE_DIR=/tmp/ccache
 export USE_CCACHE=1
@@ -33,7 +33,7 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
-# 5. Local manifest clone (আপনার সঠিক লিঙ্ক ও ব্রাঞ্চ)
+# 5. Local manifest clone
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
 
 # 6. Source sync
@@ -45,6 +45,10 @@ echo "Integrating KernelSU..."
 pushd kernel/oneplus/sm8150
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 popd
+
+# 7.5. Fix vendorsetup.sh duplication loop (এরর সলিউশন)
+echo "Removing troublesome vendorsetup.sh script to prevent clone loops..."
+rm -f device/oneplus/hotdogb/vendorsetup.sh || true
 
 # 8. Environment configuration & Android 16 Trunk Staging Flags
 export WITH_ADB_INSECURE=true
@@ -69,7 +73,7 @@ rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<
 # 11. Build process
 make installclean
 
-# Android 16 এর জন্য লাঞ্চ কমান্ড ফিক্স করা হয়েছে
+# Android 16 এর জন্য লাঞ্চ কমান্ড
 lunch infinity_hotdogb-trunk_staging-userdebug || lunch infinity_hotdogb-userdebug
 
 m bacon -j$(nproc)
