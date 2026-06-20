@@ -1,140 +1,107 @@
 #!/bin/bash
 
-# কোনো কম্যান্ড ফেইল করলে স্ক্রিপ্ট যেন সাথে সাথে বন্ধ হয়ে যায়
+# Exit immediately if a command exits with a non-zero status
 set -e
 
-# =====================================================================
-# ১. সিস্টেম সেটআপ এবং ডিপেন্ডেন্সি ইনস্টল
-# =====================================================================
-echo "Installing system dependencies..."
-sudo apt update -y
-sudo apt install patchelf ccache aria2 python3-pip ripgrep pipx -y
+echo "=========================================================="
+echo "🚀 Starting Perfect & Safe Crave Build Script for OnePlus 7T"
+echo "=========================================================="
 
-# telegram-upload ক্লিন ইনস্টল
-pip3 install telegram-upload --break-system-packages || pipx install telegram-upload
-
-# CCACHE কনফিগারেশন
+# ১. CCACHE configuration
 mkdir -p /tmp/ccache
 export CCACHE_DIR=/tmp/ccache
 export USE_CCACHE=1
 ccache -M 50G
 ccache -s
 
-# =====================================================================
-# ২. রেপো ইনিশিয়ালাইজেশন (ProjectInfinity-X Android 16)
-# =====================================================================
+# ২. Smart Clean: Remove old build outputs and conflicting directories
+echo "Cleaning up build output and conflicting directories..."
+rm -rf out/
+rm -rf device/oneplus/hotdogb
+rm -rf vendor/oneplus/hotdogb
+rm -rf kernel/oneplus/sm8150
+rm -rf .repo/local_manifests
+
+# ৩. Repo initialization (Based on official manifest)
 if [ ! -d ".repo" ]; then
-    echo "Initializing ProjectInfinity-X repository..."
+    echo "Initializing repository for the first time..."
     repo init --no-repo-verify -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 fi
 
-# =====================================================================
-# ৩. রেপো ট্র্যাক থেকে কনফ্লিক্ট ফোল্ডারগুলো মুছে ফেলা (CRITICAL FIX)
-# =====================================================================
-echo "Removing conflicting projects from repo tracking to prevent checkout error..."
-rm -rf .repo/local_manifests
-rm -rf .repo/projects/device/oneplus/hotdogb.git || true
-rm -rf .repo/projects/device/oneplus/sm8150-common.git || true
-rm -rf .repo/projects/hardware/oplus.git || true
+# ৪. Fix hooks and ensure directory structure exists
+echo "Ensuring repo directory structure..."
+mkdir -p .repo/repo/hooks
 
-# মূল সোর্স ডিরেক্টরিগুলো সম্পূর্ণ ক্লিন করা
-rm -rf device/oneplus/hotdogb
-rm -rf device/oneplus/sm8150-common
-rm -rf vendor/oneplus/sm8150-common
-rm -rf vendor/oneplus/hotdogb
-rm -rf kernel/oneplus/sm8150
+# ５. Local manifest clone (আপনার দেওয়া নতুন লিঙ্কটি এখানে যুক্ত করা হয়েছে)
+echo "Cloning local manifest from your GitHub repository..."
+git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
+
+# =====================================================================
+# 📸 OPLUS HARDWARE (ONEPLUS CAMERA DEPENDENCY) FORCE CLONE
+# =====================================================================
+echo "Cloning OnePlus Oplus Camera Hardware Repo for Android 16..."
 rm -rf hardware/oplus
+git clone https://github.com/ProjectInfinity-X/android_hardware_oplus -b 16 hardware/oplus --depth 1
+
+# ৬. Source sync (Devspace friendly method)
+echo "Syncing source code..."
+repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach
 
 # =====================================================================
-# ৪. কোর সোর্স কোড সিঙ্ক
+# 🛠️ CRITICAL FIX: PURGE TEXTPROTO CONFLICTS BEFORE ENV SETUP
 # =====================================================================
-echo "Syncing core source code..."
-# গিট চ্যাকাউট এরর এড়াতে এবং ফোর্স সিঙ্ক করতে ফ্ল্যাগ মডিফাই করা হয়েছে
-repo sync -c -j$(nproc --all) --fail-fast --force-sync --no-clone-bundle --no-tags --detach || true
-
-# সেফটি মেজার: সিঙ্কের পর যদি কোনো ফোল্ডার আবার চলে আসে, সেগুলোকে পুনরায় ক্লিন করা
-rm -rf device/oneplus/hotdogb
-rm -rf device/oneplus/sm8150-common
-rm -rf hardware/oplus
+echo "Purging old textproto files to fix Android 16 Release Config mixture error..."
+find build/make/release/ -name '*.textproto' -delete 2>/dev/null || true
+find vendor/ -name '*.textproto' -delete 2>/dev/null || true
 
 # =====================================================================
-# 🚀 সরাসরি গিট ক্লোন (Device, Kernel, and Vendor Trees)
+# Remove vendorsetup.sh to avoid duplicate clone loops
 # =====================================================================
-echo "Cloning device, kernel, and vendor trees directly..."
+echo "Removing troublesome vendorsetup.sh to avoid duplicate clone loops..."
+rm -f device/oneplus/hotdogb/vendorsetup.sh
+rm -f device/oneplus/sm8150-common/vendorsetup.sh
 
-# Device Tree ক্লোন
-git clone https://github.com/jhaidh277/device_oneplus_hotdogb -b 16 device/oneplus/hotdogb --depth 1
+# 7. KernelSU integration skipped to avoid conflicts
+echo "Skipping manual KernelSU integration to avoid conflicts..."
 
-# Common Device Tree ক্লোন
-git clone https://github.com/jhaidh277/android_device_oneplus_sm8150-common -b 16 device/oneplus/sm8150-common --depth 1
+# 8. Environment configuration & OnePlus Camera Build Flags
+echo "Flushing old build variants and setting up environment..."
+unset TARGET_PRODUCT
+unset TARGET_BUILD_VARIANT
+unset TARGET_RELEASE
 
-# Kernel Source ক্লোন
-git clone https://github.com/jhaidh277/android_kernel_oneplus_sm8150 -b 16.0 kernel/oneplus/sm8150 --depth 1
+export WITH_ADB_INSECURE=true
+export SELINUX_IGNORE_NEVERALLOWS=true
+export TARGET_GAPPS_PACKAGE_TYPE=none
+export TARGET_MULTISIM_CONFIG=dsds
+export KERNEL_SUPPORTS_KSU=true
 
-# Vendor Common Source ক্লোন
-git clone https://github.com/jhaidh277/vendor_oneplus_sm8150-common -b 16 vendor/oneplus/sm8150-common --depth 1
+# Android 16 custom ROM standard release flags
+export TARGET_RELEASE=trunk_staging
+export ALLOW_MISSING_DEPENDENCIES=true
+export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
 
-# Vendor Specific Tree (OnePlus 7T এর প্রোপ্রাইটারি ফাইল)
-git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_hotdogb -b lineage-22.1 vendor/oneplus/hotdogb --depth 1
+echo "Loading Build Environment..."
+source build/envsetup.sh
 
-# Oplus Hardware Dependency
-git clone https://github.com/ProjectInfinity-X/android_hardware_oplus -b 16 hardware/oplus --depth 1 || git clone https://github.com/LineageOS/android_hardware_oplus -b lineage-22.1 hardware/oplus --depth 1
+# Sign out from default target variables before lunch
+choosecombo userdebug infinity_hotdogb trunk_staging || true
 
-# =====================================================================
-# 🛠️ মেকফাইল অটো-ফিক্স ও নাম পরিবর্তন (CRITICAL FIXES)
-# =====================================================================
-echo "Applying deep fixes for device tree and vendor configs..."
-
-# গিট লক বা করাপ্টেড স্টেট পুরোপুরি ক্লিন করা
-rm -rf device/oneplus/hotdogb/.git
-
-# ফুল পাথ ভেরিয়েবল সেট করা
-DEV_TREE="device/oneplus/hotdogb"
-
-if [ -f "$DEV_TREE/lineage_hotdogb.mk" ]; then
-    echo "Renaming lineage_hotdogb.mk to infinity_hotdogb.mk..."
-    mv "$DEV_TREE/lineage_hotdogb.mk" "$DEV_TREE/infinity_hotdogb.mk"
+# 9. Modify the GSI Android.bp file to remove Calendar entry
+if [ -f build/make/target/product/gsi/Android.bp ]; then
+    echo "Modifying GSI Android.bp file..."
+    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
 fi
 
-if [ -f "$DEV_TREE/infinity_hotdogb.mk" ]; then
-    # প্রোডাক্ট নাম পরিবর্তন করা
-    sed -i 's/lineage_hotdogb/infinity_hotdogb/g' "$DEV_TREE/infinity_hotdogb.mk"
-    
-    # রমের আসল কনফিগারেশন ফাইলটি খুঁজে বের করা
-    echo "Checking core Infinity config file location..."
-    
-    if [ -f "vendor/infinity/config/common.mk" ]; then
-        CONF_PATH="vendor/infinity/config/common.mk"
-    elif [ -f "vendor/infinity/config/common_full_phone.mk" ]; then
-        CONF_PATH="vendor/infinity/config/common_full_phone.mk"
-    elif [ -f "vendor/infinity/config/infinity.mk" ]; then
-        CONF_PATH="vendor/infinity/config/infinity.mk"
-    else
-        DETECTED_MK=$(ls vendor/infinity/config/*.mk 2>/dev/null | head -n 1)
-        if [ ! -z "$DETECTED_MK" ]; then
-            CONF_PATH="$DETECTED_MK"
-        else
-            CONF_PATH="vendor/infinity/config/common.mk"
-        fi
-    fi
-    
-    # সঠিক পাথটি মেকফাইলে পুশ করা
-    echo "Setting config path to: $CONF_PATH"
-    sed -i "s|vendor/infinity/config/common_full_phone.mk|$CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
-    sed -i "s|vendor/lineage/config/common_full_phone.mk|$CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
-    sed -i "s|vendor/infinity/config/common.mk|$CONF_PATH|g" "$DEV_TREE/infinity_hotdogb.mk"
+# 10. Clean up git merge conflicts if any
+if [ -d device/oneplus/hotdogb ]; then
+    echo "Cleaning up potential git conflicts..."
+    rg -l -0 '<<<<<<<|=======|>>>>>>>' device/oneplus/hotdogb | xargs -0 sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
 fi
 
-# ২. AndroidProducts.mk আপডেট
-if [ -f "$DEV_TREE/AndroidProducts.mk" ]; then
-    sed -i 's/lineage_hotdogb/infinity_hotdogb/g' "$DEV_TREE/AndroidProducts.mk"
-fi
-
-# লাঞ্চ লুপ এড়াতে অপ্রয়োজনীয় vendorsetup.sh রিমুভ করা
-rm -f device/oneplus/hotdogb/vendorsetup.sh || true
-rm -f device/oneplus/sm8150-common/vendorsetup.sh || true
-
-# ভেন্ডর ফোল্ডারের Android.mk এর Kati এরর বাইপাস করা
+# =====================================================================
+# Vendor Makefile Hard Fix (Bypass Kati error and missing LOGO.img)
+# =====================================================================
 echo "Fixing vendor Android.mk to bypass Kati error..."
 if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
     sed -i '/radio/d' vendor/oneplus/hotdogb/Android.mk
@@ -142,42 +109,13 @@ if [ -f vendor/oneplus/hotdogb/Android.mk ]; then
     sed -i '/logo/d' vendor/oneplus/hotdogb/Android.mk
 fi
 
-# =====================================================================
-# ⚙️ এনভায়রনমেন্ট ফ্ল্যাগ এবং বিল্ড সেটআপ
-# =====================================================================
-echo "Setting up build environment..."
-export WITH_ADB_INSECURE=true
-export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=none
-export TARGET_MULTISIM_CONFIG=dsds
-export KERNEL_SUPPORTS_KSU=true
-export TARGET_USES_OPLUS_CAMERA=true
-export BOREALIS_CAMERA_BRAND=oneplus
-export TARGET_EXCLUDE_AOSP_CAMERA=true
-export TARGET_EXCLUDE_APERTURE_CAMERA=true
-export ALLOW_MISSING_DEPENDENCIES=true
-
-# Android 16 নির্দিষ্ট বিল্ড রিলিজ ফ্ল্যাগ
-export TARGET_RELEASE=trunk_staging
-
-# পরিবেশের ভেরিয়েবল লোড করা
-source build/envsetup.sh
-
-# GSI Android.bp ক্লিনআপ করা
-if [ -f build/make/target/product/gsi/Android.bp ]; then
-    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
-fi
-
-# =====================================================================
-# ⚡ লাঞ্চ এবং কম্পাইলেশন শুরু
-# =====================================================================
-echo "Running lunch command for Infinity-X..."
-
-# সঠিক লাঞ্চ সিকোয়েন্স ট্রাই করা
-lunch infinity_hotdogb-trunk_staging-userdebug || lunch infinity_hotdogb-userdebug
-
+# ১১. Build process start
 echo "Initializing fresh build target..."
 make installclean
 
-echo "Starting compilation with m bacon..."
+# Corrected lunch command for Android 16 Trunk Staging
+echo "Running lunch command..."
+lunch infinity_hotdogb-trunk_staging-userdebug
+
+echo "🚀 Starting compilation with m bacon..."
 m bacon -j$(nproc --all)
