@@ -7,26 +7,24 @@ echo "=========================================================="
 echo "🚀 Starting Perfect & Safe Crave Build Script for OnePlus 7T"
 echo "=========================================================="
 
-# 1. CCACHE configuration
-mkdir -p /tmp/ccache
-export CCACHE_DIR=/tmp/ccache
-export USE_CCACHE=1
+# 🎯 FIX 3: ccache এরর দূর করার জন্য এটিকে বাইপাস করা
+export USE_CCACHE=0
+echo "⚠️ Skipping ccache configuration as it is not present in container..."
 
-if command -v ccache &> /dev/null; then
-    ccache -M 50G
-    ccache -s
-else
-    echo "⚠️ ccache not found in container, proceeding..."
-fi
+# 🎯 FIX 2: 'hooks is different' এরর স্থায়ীভাবে দূর করতে গিটের পুরনো ইন্টারনাল ট্র্যাকিং ফাইল ফোর্স ক্লিন
+echo "Force cleaning corrupted directories and conflicting git hooks..."
+rm -rf .repo/local_manifests
+rm -rf .repo/projects/device/oneplus/sm8150-common.git
+rm -rf .repo/projects/vendor/oneplus/sm8150-common.git
+rm -rf .repo/project-objects/jhaidh277/android_device_oneplus_sm8150-common.git
+rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git
 
-# 2. Smart Clean: পুরনো বা কনফ্লিক্ট হওয়া ডিরেক্টরিগুলো পরিষ্কার করা (স্মার্ট ও সেফ উপায়)
-echo "Performing a targeted clean to fix corrupted directories..."
+# সোর্স ডিরেক্টরিগুলো ক্লিন করা
 rm -rf device/oneplus/hotdogb
 rm -rf device/oneplus/sm8150-common
 rm -rf vendor/oneplus/hotdogb
 rm -rf vendor/oneplus/sm8150-common
 rm -rf kernel/oneplus/sm8150
-rm -rf .repo/local_manifests
 
 # 3. Repo initialization
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
@@ -35,8 +33,14 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks
 
-# 5. Local manifest clone (আপনার আপডেট করা নতুন লোকাল ম্যানিফেস্টটি আসবে)
+# 5. Local manifest clone (আপনার নতুন আপডেট করা ম্যানিফেস্ট আসবে)
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
+
+# 🎯 FIX 1 (Double Protection): ক্র্যাভ সিঙ্ক রান করার ঠিক আগে অফিশিয়াল ম্যানিফেস্ট ট্র্যাক থেকেও ant-wireless রিমুভ নিশ্চিত করা
+if [ -f .repo/manifests/default.xml ]; then
+    echo "Bypassing ant-wireless from official manifest definition..."
+    sed -i '/external\/ant-wireless/d' .repo/manifests/default.xml || true
+fi
 
 # 6. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
