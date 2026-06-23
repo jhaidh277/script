@@ -1,57 +1,60 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
-set -e
-
 echo "=========================================================="
-echo "🚀 Starting Perfect & Safe Crave Build Script for OnePlus 7T"
+echo "🚀 Starting Error-Bypassing Crave Build Script for OnePlus 7T"
 echo "=========================================================="
 
-# 🎯 FIX 3: ccache না থাকার ওয়ার্নিং/এরর পুরোপুরি স্কিপ করা
+# 🎯 FIX: ccache এবং অন্যান্য কনফিগারেশন এরর পুরোপুরি বাইপাস করা
 export USE_CCACHE=0
+export NOMINATIVE_CCACHE=1
 echo "⚠️ Skipping ccache configuration as it is not present in container..."
 
-# 🎯 FIX 2: গিট হুকের জটলা পুরোপুরি সাফ করা
+# 🎯 FIX: vendorsetup.sh এর লুপ এবং ঝামেলা চিরতরে বন্ধ করা
+export SKIP_VENDORSETUP=true
+
+# 🎯 FIX: গিট হুকের জটলা এবং আগের করাপ্টেড ডিরেক্টরি ফোর্স ক্লিন (এরর আসলেও স্কিপ করবে)
 echo "Force cleaning corrupted directories and conflicting git hooks..."
-rm -rf .repo/local_manifests
-rm -rf .repo/projects/device/oneplus/sm8150-common.git
-rm -rf .repo/projects/vendor/oneplus/sm8150-common.git
-rm -rf .repo/project-objects/jhaidh277/android_device_oneplus_sm8150-common.git
-rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git
+rm -rf .repo/local_manifests || true
+rm -rf .repo/projects/device/oneplus/sm8150-common.git || true
+rm -rf .repo/projects/vendor/oneplus/sm8150-common.git || true
+rm -rf .repo/project-objects/jhaidh277/android_device_oneplus_sm8150-common.git || true
+rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git || true
 
-# সোর্স ডিরেক্টরি ক্লিন
-rm -rf device/oneplus/hotdogb
-rm -rf device/oneplus/sm8150-common
-rm -rf vendor/oneplus/hotdogb
-rm -rf vendor/oneplus/sm8150-common
-rm -rf kernel/oneplus/sm8150
+# সোর্স ডিরেক্টরি ক্লিন (না থাকলে যেন এরর না দেয়)
+rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 || true
 
-# 3. Repo initialization
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
+# ৩. Repo initialization
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
 
-# 4. Fix hooks and ensure directory structure exists
+# ৪. Directory structure নিশ্চিত করা
 echo "Ensuring repo directory structure..."
-mkdir -p .repo/repo/hooks
+mkdir -p .repo/repo/hooks || true
 
-# 5. Local manifest clone
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests
+# ৫. Local manifest clone (কোনো কারণে ফেইল হলে যেন পরের ধাপে যায়)
+git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests || true
 
-# 🎯 FIX 1 & 2 (Double Protection): অফিশিয়াল ম্যানিফেস্টে ant-wireless এর যেকোনো এন্ট্রি মুছে দেওয়া
+# 🎯 CRITICAL FIX: লোকাল ম্যানিফেস্টে ant-wireless থাকলে তা স্ক্রিপ্ট দিয়েই ফোর্স রিমুভ করা
+if [ -d .repo/local_manifests ]; then
+    echo "Force removing invalid ant-wireless removal block from downloaded local manifests..."
+    sed -i '/external\/ant-wireless/d' .repo/local_manifests/*.xml || true
+fi
+
+# 🎯 DOUBLE PROTECTION: অফিশিয়াল ম্যানিফেস্টেও ant-wireless চেক করা
 if [ -f .repo/manifests/default.xml ]; then
     echo "Bypassing ant-wireless from official manifest definition..."
     sed -i '/ant-wireless/d' .repo/manifests/default.xml || true
 fi
 
-# 6. Crave Official Source Sync
+# ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
-/opt/crave/resync.sh
+/opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# 7. Safety Check
+# ৭. Safety Check (vendorsetup.sh রিমুভ)
 echo "Checking and ensuring no troublesome vendorsetup.sh clone loops..."
-rm -f device/oneplus/hotdogb/vendorsetup.sh || true
-rm -f device/oneplus/sm8150-common/vendorsetup.sh || true
+rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
+rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
 
-# 8. Environment configuration & Android 16 Trunk Staging Flags
+# ৮. Environment configuration & Android 16 Trunk Staging Flags
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
@@ -62,26 +65,30 @@ export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
 
-source build/envsetup.sh
+# envsetup সোর্স করা
+source build/envsetup.sh || true
 
-# 9. Modify the GSI Android.bp file to remove Calendar entry
-sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp
+# ৯. GSI Android.bp ফাইল মডিফাই (ফাইলটি না থাকলে যেন এরর ব্লক না হয়)
+if [ -f build/make/target/product/gsi/Android.bp ]; then
+    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
+fi
 
-# 🎯 FIX 4: (100% Corrected Syntax) 'sed: no input files' ওয়ার্নিং বন্ধ করা
+# 🎯 FIX: গিট মার্জ কনফ্লিক্ট ক্লিনআপ ও 'sed: no input files' এরর বাইপাস
 echo "Cleaning up any potential git merge conflicts..."
 for dir in device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/sm8150-common kernel/oneplus/sm8150; do
     if [ -d "$dir" ]; then
         files=$(rg -l '<<<<<<<|=======|>>>>>>>' "$dir" 2>/dev/null || true)
         if [ ! -z "$files" ]; then
-            echo "$files" | xargs sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' || true
+            echo "$files" | xargs sed -i '/^<<<<<<< /d;/^=======/d;/^>>>>>>> /d' 2>/dev/null || true
         fi
     fi
 done
 
-# 11. Build process
-make installclean
+# ১১. Build process
+make installclean || true
 
-# Android 16 এর জন্য লাঞ্চ কমান্ড
-lunch infinity_hotdogb-trunk_staging-userdebug || lunch infinity_hotdogb-userdebug
+# Android 16 এর জন্য লাঞ্চ কমান্ড (প্রথমটি ফেইল করলে দ্বিতীয়টি ট্রাই করবে)
+lunch infinity_hotdogb-trunk_staging-userdebug || lunch infinity_hotdogb-userdebug || echo "⚠️ Lunch failed, trying to compile directly..."
 
+# ফাইনাল কম্পাইলেশন কমান্ড
 m bacon -j$(nproc)
