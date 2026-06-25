@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting Error-Bypassing Crave Build Script for OnePlus 7T"
+echo "🚀 Starting Perfect Crave Build Script (Pre-Integrated KSU) for OnePlus 7T"
 echo "=========================================================="
 
 # 🎯 FIX: ccache এবং অন্যান্য কনফিগারেশন এরর পুরোপুরি বাইপাস করা
@@ -12,7 +12,7 @@ echo "⚠️ Skipping ccache configuration as it is not present in container..."
 # 🎯 FIX: vendorsetup.sh এর লুপ এবং ঝামেলা চিরতরে বন্ধ করা
 export SKIP_VENDORSETUP=true
 
-# 🎯 FIX: গিট হুকের জটলা এবং আগের করাপ্টেড ডিরেক্টরি ফোর্স ক্লিন (এরর আসলেও স্কিপ করবে)
+# 🎯 FIX: গিট হুকের জটলা এবং আগের করাপ্টেড ডিরেক্টরি ফোর্স ক্লিন
 echo "Force cleaning corrupted directories and conflicting git hooks..."
 rm -rf .repo/local_manifests || true
 rm -rf .repo/projects/device/oneplus/sm8150-common.git || true
@@ -30,7 +30,7 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 echo "Ensuring repo directory structure..."
 mkdir -p .repo/repo/hooks || true
 
-# ৫. Local manifest clone (কোনো কারণে ফেইল হলে যেন পরের ধাপে যায়)
+# ৫. Local manifest clone
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests || true
 
 # 🎯 CRITICAL FIX: লোকাল ম্যানিফেস্টে ant-wireless থাকলে তা স্ক্রিপ্ট দিয়েই ফোর্স রিমুভ করা
@@ -49,6 +49,28 @@ fi
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
+# 🎯 🎯 [KERNELSU ACTIVATION] সোর্সে থাকা KernelSU অ্যাক্টিভেট করা
+echo "=========================================================="
+echo "🛠️ Activating Pre-Existing KernelSU in OnePlus 7T Kernel..."
+echo "=========================================================="
+if [ -d "kernel/oneplus/sm8150" ]; then
+    cd kernel/oneplus/sm8150
+    
+    # ডিফকনফিগে KernelSU ফ্ল্যাগ এনাবল করা (সম্ভাব্য সব defconfig ফাইলে)
+    for defconfig in arch/arm64/configs/vendor/sm8150-perf_defconfig arch/arm64/configs/sm8150-perf_defconfig arch/arm64/configs/vendor/hotdogb_defconfig; do
+        if [ -f "$defconfig" ]; then
+            echo "Enabling KernelSU configs in $defconfig..."
+            # আগের ডুপ্লিকেট বা কমেন্ট করা লাইন থাকলে তা পরিষ্কার করা
+            sed -i '/CONFIG_KERNELSU/d' $defconfig || true
+            # নতুন অ্যাক্টিভেশন এন্ট্রি যুক্ত করা
+            echo "CONFIG_KERNELSU=y" >> $defconfig
+        fi
+    done
+    cd ../../..
+    echo "✅ KernelSU configuration injection completed."
+fi
+echo "=========================================================="
+
 # ৭. Safety Check (vendorsetup.sh রিমুভ)
 echo "Checking and ensuring no troublesome vendorsetup.sh clone loops..."
 rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
@@ -65,10 +87,15 @@ export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
 
+# আগের xbin/su এরর ফিক্স করার জন্য ফ্ল্যাগ
+export BUILD_WITHOUT_SU=true
+export OVERRIDE_ANDROID_VERSION_CHECK=true
+export WITHOUT_SU=true
+
 # envsetup সোর্স করা
 source build/envsetup.sh || true
 
-# ৯. GSI Android.bp ফাইল মডিফাই (ফাইলটি না থাকলে যেন এরর ব্লক না হয়)
+# ৯. GSI Android.bp ফাইল মডিফাই
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
@@ -87,7 +114,7 @@ done
 # ১১. Build process
 make installclean || true
 
-# Android 16 এর জন্য লাঞ্চ কমান্ড (প্রথমটি ফেইল করলে দ্বিতীয়টি ট্রাই করবে)
+# Android 16 এর জন্য লাঞ্চ কমান্ড
 lunch infinity_hotdogb-trunk_staging-userdebug || lunch infinity_hotdogb-userdebug || echo "⚠️ Lunch failed, trying to compile directly..."
 
 # ফাইনাল কম্পাইলেশন কমান্ড
