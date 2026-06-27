@@ -56,7 +56,6 @@ echo "Syncing sources via Crave resync..."
 BP_FILE="vendor/oneplus/sm8150-common/Android.bp"
 if [ -f "$BP_FILE" ]; then
     echo "🛠️ Dynamically fixing duplicate prebuilt_ module definition in sm8150-common Android.bp..."
-    # রেগুলার এক্সপ্রেশন ব্যবহার করা হয়েছে যাতে কমা বা স্পেসের কোনো ঝামেলা না থাকে
     awk '/name:[[:space:]]*"prebuilt_"/ { count++; if (count == 2) { sub(/"prebuilt_"/, "\"prebuilt_duplicate_fixed_\"") } } { print }' "$BP_FILE" > "${BP_FILE}.tmp" && mv "${BP_FILE}.tmp" "$BP_FILE" || true
     echo "✅ Duplicate module bypass applied dynamically."
 fi
@@ -137,8 +136,8 @@ rm -rf out/soong/compliance || true
 rm -f out/soong/build.ninja || true
 rm -rf out/soong/.config || true
 
-# FIX: Android 16 ফরম্যাট অনুযায়ী সংশোধিত লাঞ্চ কমান্ড
-lunch infinity_hotdogb-userdebug || echo "⚠️ Lunch failed, trying alternative build type..."
+# FIX: Android 16 ফরম্যাট অনুযায়ী সংশোধিত ও সুরক্ষিত লাঞ্চ কমান্ড
+lunch infinity_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed, trying alternative build type..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
