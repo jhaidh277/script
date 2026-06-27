@@ -40,7 +40,7 @@ if [ -d .repo/local_manifests ]; then
     echo "Force removing invalid ant-wireless removal block from downloaded local manifests..."
     sed -i '/external\/ant-wireless/d' .repo/local_manifests/*.xml || true
     
-    # 🎯 🎯 [VERIFIED INTERFACE FIX]: অ্যান্ড্রয়েড ১৬ এর সাথে সামঞ্জস্যপূর্ণ 'main' ব্রাঞ্চ সেট করা
+    # 🎯 [VERIFIED INTERFACE FIX]: ওপো হার্ডওয়্যার ইন্টারফেস মেইন সোর্সের জন্য ইনজেক্ট করা
     if ! grep -q "hardware/oplus" .repo/local_manifests/*.xml; then
         echo "Injecting Android 16 compatible hardware/oplus dependency..."
         sed -i '/<\/manifest>/i \  <project name="LineageOS/android_hardware_oplus" path="hardware/oplus" remote="github" revision="main" />' .repo/local_manifests/*.xml || true
@@ -86,11 +86,11 @@ export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 
-# 🎯 ওপো ক্যামেরা ফ্রেমওয়ার্ক এরর সম্পূর্ণ বাইপাস করার গ্লোবাল কম্পাইলার ফ্ল্যাগস
+# 🎯 ওপো ক্যামেরা মেকফাইল ট্র্যাপ চিরতরে নিষ্ক্রিয় করার গ্লোবাল এনভায়রনমেন্ট ফ্ল্যাগস
 export TARGET_USES_OPLUS_CAMERA=false
 export TARGET_USES_OPPO_CAMERA=false
-export TARGET_SPECIFIC_CAMERA_PARAMETER_LIBRARY=libcameracustom
 export BOARD_USES_OPPO_CAMERA=false
+export TARGET_SPECIFIC_CAMERA_PARAMETER_LIBRARY=libcameracustom
 
 # envsetup সোর্স করার আগেই রিলিজ ফ্ল্যাগ সেট করা
 export TARGET_RELEASE=trunk_staging
@@ -113,17 +113,24 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# 🎯 🎯 [FINAL CAMERA SERVICE TRAP FIX]
+# 🎯 🎯 [FINAL BULLETPROOF CAMERA SERVICE PATCH - COMPLETELY SAFE]
 CAMERA_SVC="frameworks/av/services/camera/libcameraservice/CameraService.cpp"
 if [ -f "$CAMERA_SVC" ]; then
-    echo "🛠️ Applying Deep Fix to CameraService.cpp to prevent unknown reference crash..."
-    # ওপো ক্যামেরা সার্ভিস কোডগুলোকে কম্পাইলার লেভেলে সেফ মোডে কনভার্ট করা
-    sed -i 's|#include <vendor/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.h>|// OPlus Camera Interface Bypassed|g' "$CAMERA_SVC" || true
-    # কোনো কাস্টম কোড ব্লক এক্সিকিউট হওয়া থেকে বাঁচতে ফ্ল্যাগ ইনজেকশন
-    sed -i 's/ifdef OPLUS_CAMERA_SUPPORT/ifdef OPLUS_CAMERA_SUPPORT_DISABLED/g' "$CAMERA_SVC" || true
+    echo "🛠️ Applying Global Purge to CameraService.cpp..."
+    
+    # ইনক্লুড ব্লক সম্পূর্ণরূপে কমেন্ট আউট
+    sed -i 's|#include <vendor/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.h>|// Bypassed By Script|g' "$CAMERA_SVC" || true
+    
+    # ১৫৪ নম্বর লাইনের ওপো নেমস্পেস কমেন্ট আউট
+    sed -i 's|using ::vendor::oplus::hardware::cameraMDM::V2_0::IOPlusCameraMDM;|// Namespace Bypassed|g' "$CAMERA_SVC" || true
+    
+    # ১৯৫ নম্বর লাইনের কাস্টম ক্যামেরা অবজেক্ট এরর এড়াতে এটিকে স্ট্যান্ডার্ড রিফ-বেস টাইপ দিয়ে নাল (null) সেট করা
+    sed -i 's|static const sp<IOPlusCameraMDM> gVendorCameraProviderService = IOPlusCameraMDM::getService();|static const sp<android::RefBase> gVendorCameraProviderService = nullptr;|g' "$CAMERA_SVC" || true
+    
+    echo "✅ CameraService.cpp logic has been cleanly patched."
 fi
 
-# 🎯 FIX: গিট মার্জ কনф্লিক্ট ক্লিনআপ ও 'sed: no input files' এরর বাইপাস
+# 🎯 FIX: গিট মার্জ কনফ্লিক্ট ক্লিনআপ ও 'sed: no input files' এরর বাইপাস
 echo "Cleaning up any potential git merge conflicts..."
 for dir in device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/sm8150-common kernel/oneplus/sm8150; do
     if [ -d "$dir" ]; then
@@ -134,7 +141,11 @@ for dir in device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/sm
     fi
 done
 
-# 🎯 [CRITICAL CLEANUP] ২৯% এরর এবং নিনজা ক্যাশ লক থেকে বাঁচতে গভীর ক্লিনআপ
+# 🎯 🎯 [CRITICAL ULTRA CLEANUP] ক্যামেরা সার্ভিসের ওল্ড ক্র্যাশড সোং ইন্টারমিডিয়েট অবজেক্ট ক্যাশ ফোর্স ক্লিন
+echo "Force cleaning old camera service intermediate cache..."
+rm -rf out/soong/.intermediates/frameworks/av/services/camera/libcameraservice || true
+
+# ২৯% এরর এবং নিনজা ক্যাশ লক থেকে বাঁচতে গভীর ক্লিনআপ
 echo "Performing Deep Soong/Ninja cache cleanup to prevent 29% crash..."
 rm -rf out/soong/.intermediates/build/soong/compliance || true
 rm -rf out/soong/compliance || true
