@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting 100% Verified OPlus Camera Enabled Build Script"
+echo "🚀 Starting 100% Verified OPlus Camera Path-Corrected Script"
 echo "=========================================================="
 
 # মেইন সোর্স ডিরেক্টরি ট্র্যাক রাখার জন্য পাথ সেভ
@@ -23,8 +23,8 @@ rm -rf .repo/projects/vendor/oneplus/sm8150-common.git || true
 rm -rf .repo/project-objects/jhaidh277/android_device_oneplus_sm8150-common.git || true
 rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git || true
 
-# সোর্স ডিরেক্টরি ক্লিন
-rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/interfaces/vendor/oplus || true
+# সোর্স ডিরেক্টরি ক্লিন (এবার ওপো ইন্টারফেস পাথও ফ্রেশ ক্লিন করা হচ্ছে)
+rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
 
 # ৩. Repo initialization
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
@@ -51,17 +51,18 @@ if [ -f .repo/manifests/default.xml ]; then
     sed -i '/ant-wireless/d' .repo/manifests/default.xml || true
 fi
 
-# ৬. Crave Official Source Sync
+# 六. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# 🎯 🎯 [DYNAMIC OPLUS INTERFACE GENERATION - THE ULTIMATE KEY]
-# ওপো ক্যামেরার অনুপস্থিত ইন্টারফেস টাইপ কম্পাইলারকে চেনাানোর জন্য ডাইনামিক ইন্টারফেস ফাইল তৈরি
-echo "🛠️ Creating Missing OPlus Camera MDM Interfaces for Android 16..."
-mkdir -p hardware/interfaces/vendor/oplus/hardware/cameraMDM/2.0 || true
+# 🎯 🎯 🎯 [DYNAMIC OPLUS INTERFACE GENERATION - PATH CORRECTED FOR HIDL-GEN]
+# কম্পাইলারের চাওয়া নির্দিষ্ট পাথে ডিরেক্টরি তৈরি করা হচ্ছে
+OP_CAM_PATH="hardware/oplus/interfaces/oplus/hardware/cameraMDM/2.0"
+echo "🛠️ Generating Missing OPlus Camera MDM Hal Files in correct path: $OP_CAM_PATH"
+mkdir -p "$OP_CAM_PATH" || true
 
-# Android.bp তৈরি করা যাতে কম্পাইলার ওপো ক্যামেরার নেমস্পেস ও টাইপগুলো খুঁজে পায়
-cat << 'EOF' > hardware/interfaces/vendor/oplus/hardware/cameraMDM/2.0/Android.bp
+# Android.bp ফাইল তৈরি
+cat << 'EOF' > "$OP_CAM_PATH/Android.bp"
 hidl_interface {
     name: "vendor.oplus.hardware.cameraMDM@2.0",
     root: "vendor.oplus",
@@ -75,8 +76,8 @@ hidl_interface {
 }
 EOF
 
-# .hal ইন্টারফেস ডিফাইন করা
-cat << 'EOF' > hardware/interfaces/vendor/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.hal
+# IOPlusCameraMDM.hal ইন্টারফেস ফাইল তৈরি
+cat << 'EOF' > "$OP_CAM_PATH/IOPlusCameraMDM.hal"
 package vendor.oplus.hardware.cameraMDM@2.0;
 import android.hidl.base@1.0::IBase;
 
@@ -115,7 +116,7 @@ export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 
-# ওপো ক্যামেরা চালু করার জন্য এনভায়রনমেন্ট ফ্ল্যাগ ট্রু করা হলো
+# ওপো ক্যামেরা চালু করার গ্লোবাল এনভায়রনমেন্ট ফ্ল্যাগস
 export TARGET_USES_OPLUS_CAMERA=true
 export TARGET_USES_OPPO_CAMERA=true
 export BOARD_USES_OPPO_CAMERA=true
@@ -142,13 +143,6 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# 🎯 🎯 ওপো ক্যামেরা মেকফাইল নিশ্চিত করা (ফাইল রিস্টোর)
-CAMERA_SVC="frameworks/av/services/camera/libcameraservice/CameraService.cpp"
-if [ -f "$CAMERA_SVC" ]; then
-    echo "🔄 Restoring original CameraService.cpp to correctly link OPlus Camera..."
-    git checkout "$CAMERA_SVC" 2>/dev/null || true
-fi
-
 # 🎯 FIX: গিট মার্জ কনф্লিক্ট ক্লিনআপ ও 'sed: no input files' এরর বাইপাস
 echo "Cleaning up any potential git merge conflicts..."
 for dir in device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus; do
@@ -163,6 +157,7 @@ done
 # 🎯 [CRITICAL CLEANUP] ওল্ড ক্র্যাশড ক্যাশ মেমোরি পরিষ্কার করা
 echo "Performing Deep Soong/Ninja cache cleanup..."
 rm -rf out/soong/.intermediates/frameworks/av/services/camera/libcameraservice || true
+rm -rf out/soong/.intermediates/hardware/interfaces/vendor/oplus || true
 rm -rf out/soong/.intermediates/build/soong/compliance || true
 rm -rf out/soong/compliance || true
 rm -f out/soong/build.ninja || true
