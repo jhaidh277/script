@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting 100% Fixed Crave Build Script for OnePlus 7T"
+echo "🚀 Starting 100% Bullet-Proof Crave Build Script for OnePlus 7T"
 echo "=========================================================="
 
 # মেইন সোর্স ডিরেক্টরি ট্র্যাক রাখার জন্য পাথ সেভ
@@ -58,15 +58,11 @@ echo "🛠️ Activating Pre-Existing KernelSU in OnePlus 7T Kernel..."
 echo "=========================================================="
 if [ -d "kernel/oneplus/sm8150" ]; then
     cd kernel/oneplus/sm8150
-    
-    # কার্নেলের ভেতরের সব ধরণের defconfig ফাইলে KernelSU ফোর্স ইনজেক্ট করা
     find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
         echo "Enabling KernelSU configs in $defconfig..."
         sed -i '/CONFIG_KERNELSU/d' "$defconfig" || true
         echo "CONFIG_KERNELSU=y" >> "$defconfig"
     done
-    
-    # নিরাপদ উপায়ে মেইন সোর্স ডিরেক্টরিতে ফেরত আসা
     cd "$MAIN_DIR"
     echo "✅ KernelSU configuration injection completed."
 fi
@@ -77,6 +73,16 @@ echo "Checking and ensuring no troublesome vendorsetup.sh clone loops..."
 rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
 rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
 
+# 🎯 🎯 [ULTIMATE CAMERA LOCK FIX] ৬৮% এরর চিরতরে বন্ধ করার ফোর্স মেকানিজম:
+echo "Searching and neutralising hardcoded cameraMDM dependencies..."
+find device/oneplus/ vendor/oneplus/ frameworks/av/ -type f \( -name "*.bp" -o -name "*.mk" \) 2>/dev/null | while read -r file; do
+    if grep -q "vendor.oplus.hardware.cameraMDM" "$file"; then
+        echo "Removing dependency from: $file"
+        # জিপ বা রিকোয়ার্ড ব্লকের ভেতরের ওই নির্দিষ্ট লাইনটি মুছে দেওয়া বা কমেন্ট করা
+        sed -i '/vendor.oplus.hardware.cameraMDM/d' "$file" || true
+    fi
+done
+
 # ========================================================
 # ৮. Environment configuration & Android 16 Trunk Staging Flags
 # ========================================================
@@ -85,11 +91,16 @@ export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
 export TARGET_MULTISIM_CONFIG=dsds
 
-# 🎯 🎯 CRITICAL FIX FOR DUMP_VARS: envsetup সোর্স করার আগেই রিলিজ ফ্ল্যাগ সেট করা
+# CRITICAL FIX FOR DUMP_VARS & MISSING DEPENDENCIES
 export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
 export TARGET_RELEASE_CONFIG_BUILD_FLAVOR=default
+
+# ওয়ানপ্লাস ক্যামেরা ডিপেন্ডেন্সি এরর ব্যাকআপ ফ্ল্যাগ
+export BUILD_BROKEN_MISSING_REQUIRED_MODULES=true
+export BUILD_BROKEN_USES_NETWORK=true
+export ERROR_ON_MISSING_DEPENDENCIES=false
 
 # রুট এবং পূর্ববর্তী su এরর বাইপাস ফ্ল্যাগ
 export BUILD_WITHOUT_SU=true
@@ -121,17 +132,17 @@ for dir in device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/sm
     fi
 done
 
-# 🎯 [CRITICAL CLEANUP] ২৯% এরর এবং নিনজা ক্যাশ লক থেকে বাঁচতে গভীর ক্লিনআপ
-echo "Performing Deep Soong/Ninja cache cleanup to prevent 29% crash..."
+# 🎯 [CRITICAL CLEANUP] নিনজা ক্যাশ লক থেকে বাঁচতে গভীর ক্লিনআপ
+echo "Performing Deep Soong/Ninja cache cleanup..."
 rm -rf out/soong/.intermediates/build/soong/compliance || true
 rm -rf out/soong/compliance || true
 rm -f out/soong/build.ninja || true
 rm -rf out/soong/.config || true
 
-# 🎯 🎯 FIX: Android 16 ফরম্যাট অনুযায়ী সংশোধিত লাঞ্চ কমান্ড (অতিরিক্ত প্যারামিটার রিমুভড)
+# Android 16 এর জন্য লাঞ্চ কমান্ড
 lunch infinity_hotdogb-userdebug || echo "⚠️ Lunch failed, trying alternative build type..."
 
-# 🎯 লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
+# লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
 
 # ফাইনাল কম্পাইলেশন কমান্ড
