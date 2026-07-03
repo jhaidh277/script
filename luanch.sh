@@ -14,6 +14,9 @@ export SKIP_VENDORSETUP=true
 # ২. Repo initialization
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
 
+# হুকস এরর সমাধানের জন্য ক্লিনআপ কমান্ড
+find .repo/ -name "hooks" -type d -exec rm -rf {} + || true
+
 # ৩. Local manifest clone
 if [ ! -d ".repo/local_manifests" ]; then
     git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests || true
