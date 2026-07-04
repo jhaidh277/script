@@ -1,19 +1,16 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting Ultimate Build Script (Clean & Fixed)"
+echo "🚀 Starting Ultimate Build Script (Crave Compliance)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
 
-# ১. Smart Clean: পুরনো অসম্পূর্ণ বিল্ডের ফাইল এবং কনফ্লিক্ট ডিলিট করা
-echo "Cleaning up build output and conflicting directories..."
-rm -rf out/
+# ১. শুধুমাত্র ফাইল বা ফোল্ডার ডিলিট করা হচ্ছে (কোনো ক্লিন কমান্ড নয়)
 rm -rf device/oneplus/hotdogb
 rm -rf vendor/oneplus/hotdogb
 rm -rf kernel/oneplus/sm8150
 rm -rf .repo/local_manifests
-# পুরনো হুকস থাকলে তা সরিয়ে ফেলা
 find .repo/ -name "hooks" -type d -exec rm -rf {} + || true
 
 # ২. এনভায়রনমেন্ট সেটআপ
@@ -21,8 +18,8 @@ export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
-# ৩. Repo initialization
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
+# ৩. Repo initialization: --depth 1 যুক্ত করা হয়েছে
+repo init --no-repo-verify --git-lfs --depth 1 -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
 
 # ৪. Local manifest clone
 if [ ! -d ".repo/local_manifests" ]; then
