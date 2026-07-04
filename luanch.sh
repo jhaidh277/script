@@ -1,32 +1,39 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting Safe Build Script (No Clean, No Camera, Fixed)"
+echo "🚀 Starting Ultimate Build Script (Clean & Fixed)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
 
-# ১. এনভায়রনমেন্ট সেটআপ (ccache ও vendorsetup বাইপাস)
+# ১. Smart Clean: পুরনো অসম্পূর্ণ বিল্ডের ফাইল এবং কনফ্লিক্ট ডিলিট করা
+echo "Cleaning up build output and conflicting directories..."
+rm -rf out/
+rm -rf device/oneplus/hotdogb
+rm -rf vendor/oneplus/hotdogb
+rm -rf kernel/oneplus/sm8150
+rm -rf .repo/local_manifests
+# পুরনো হুকস থাকলে তা সরিয়ে ফেলা
+find .repo/ -name "hooks" -type d -exec rm -rf {} + || true
+
+# ২. এনভায়রনমেন্ট সেটআপ
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
-# ২. Repo initialization
+# ৩. Repo initialization
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
 
-# হুকস এরর সমাধানের জন্য ক্লিনআপ কমান্ড
-find .repo/ -name "hooks" -type d -exec rm -rf {} + || true
-
-# ৩. Local manifest clone
+# ৪. Local manifest clone
 if [ ! -d ".repo/local_manifests" ]; then
     git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests || true
 fi
 
-# ৪. Crave Official Source Sync
+# ৫. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || true
 
-# ৫. KernelSU ACTIVATION (কার্নেল সোর্সে)
+# ৬. KernelSU ACTIVATION (কার্নেল সোর্সে)
 if [ -d "kernel/oneplus/sm8150" ]; then
     cd kernel/oneplus/sm8150
     find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
@@ -36,7 +43,7 @@ if [ -d "kernel/oneplus/sm8150" ]; then
     cd "$MAIN_DIR"
 fi
 
-# ৬. Environment configuration
+# ৭. Environment configuration
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=none
@@ -57,12 +64,12 @@ export OVERRIDE_NOTICE_FIELDS=true
 
 source build/envsetup.sh || true
 
-# ৭. GSI Android.bp ফাইল মডিফাই
+# ৮. GSI Android.bp ফাইল মডিফাই
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# ৮. লাঞ্চ এবং বিল্ড কমান্ড
+# ৯. লাঞ্চ এবং বিল্ড কমান্ড
 lunch infinity_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # ফাইনাল কম্পাইলেশন কমান্ড
