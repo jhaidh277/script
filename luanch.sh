@@ -33,7 +33,7 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 mkdir -p .repo/repo/hooks || true
 
 # ৫. Local manifest clone
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b op .repo/local_manifests || true
+git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b main .repo/local_manifests || true
 
 # ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
