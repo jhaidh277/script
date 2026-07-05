@@ -26,8 +26,8 @@ rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git || true
 # সোর্স ডিরেক্টরি ক্লিন
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
 
-# ৩. Repo initialization
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault || true
+# ৩. Repo initialization (Updated with --depth 1 before || true as per 260.png)
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
 
 # ৪. Directory structure নিশ্চিত করা
 mkdir -p .repo/repo/hooks || true
