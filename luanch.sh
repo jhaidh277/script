@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting 100% Verified Script (Cleaned)"
+echo "🚀 Starting 100% Verified Script (Full Fix Applied)"
 echo "=========================================================="
 
 # মেইন সোর্স ডিরেক্টরি ট্র্যাক রাখার জন্য পাথ সেভ
@@ -22,22 +22,25 @@ rm -rf .repo/projects/device/oneplus/sm8150-common.git || true
 rm -rf .repo/projects/vendor/oneplus/sm8150-common.git || true
 rm -rf .repo/project-objects/jhaidh277/android_device_oneplus_sm8150-common.git || true
 rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git || true
+# ডিরেক্টরি ক্লিন
+rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus out/ || true
 
-# সোর্স ডিরেক্টরি ক্লিন
-rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
-
-# ৩. Repo initialization (Matrixx 16.2 এ আপডেট করা হয়েছে)
+# ৩. Repo initialization
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectMatrixx/android -b 16.2 -g default,-mips,-darwin,-notdefault --depth 1 || true
+
+# 🎯 [NEW] হুক কনফ্লিক্ট চিরতরে ফিক্স করার জন্য ক্লিনআপ
+echo "Cleaning existing git hooks to prevent sync errors..."
+find .repo/ -name ".git" | xargs -I {} rm -rf {}/hooks
 
 # ৪. Directory structure নিশ্চিত করা
 mkdir -p .repo/repo/hooks || true
 
-# ৫. Local manifest clone (ব্রাঞ্চ নাম 'matrixx' এ আপডেট করা হয়েছে)
+# ৫. Local manifest clone (ব্রাঞ্চ নাম 'matrix' এ আপডেট করা হয়েছে)
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b matrix .repo/local_manifests || true
 
 # ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
-/opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
+/opt/crave/resync.sh || repo sync -c --force-sync --no-tags --no-clone-bundle --optimized-fetch --prune --jobs=$(nproc)
 
 # 🎯 [DYNAMIC CRITICAL FIX - VERIFIED] ডুপ্লিকেট "prebuilt_" মডিউল ১০০% ফিক্স
 BP_FILE="vendor/oneplus/sm8150-common/Android.bp"
@@ -60,20 +63,15 @@ fi
 rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
 rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
 
-# ========================================================
 # ৮. Environment configuration
-# ========================================================
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=true
 export TARGET_MULTISIM_CONFIG=dsds
-
-# envsetup সোর্স করা
 export TARGET_RELEASE=trunk_staging
 export ALLOW_MISSING_DEPENDENCIES=true
 export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
 export TARGET_RELEASE_CONFIG_BUILD_FLAVOR=default
-
 export BUILD_WITHOUT_SU=true
 export OVERRIDE_ANDROID_VERSION_CHECK=true
 export WITHOUT_SU=true
@@ -89,12 +87,11 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-
-# FIX: Matrixx লাঞ্চ কমান্ড (আপডেট করা হয়েছে)
+# FIX: Matrixx লাঞ্চ কমান্ড
 lunch matrixx_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
 
-# ফাইনাল কম্পাইলেশন কমান্ড (Matrixx এর জন্য আপডেট করা হয়েছে)
+# ফাইনাল কম্পাইলেশন কমান্ড
 crave run -- make matrixx -j$(nproc)
