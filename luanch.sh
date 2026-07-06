@@ -26,14 +26,14 @@ rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git || true
 # সোর্স ডিরেক্টরি ক্লিন
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
 
-# ৩. Repo initialization (Updated with --depth 1 before || true as per 260.png)
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
+# ৩. Repo initialization (Matrixx 16.2 এ আপডেট করা হয়েছে)
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectMatrixx/android -b 16.2 -g default,-mips,-darwin,-notdefault --depth 1 || true
 
 # ৪. Directory structure নিশ্চিত করা
 mkdir -p .repo/repo/hooks || true
 
-# ৫. Local manifest clone
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b infinity .repo/local_manifests || true
+# ৫. Local manifest clone (ব্রাঞ্চ নাম 'matrixx' এ আপডেট করা হয়েছে)
+git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b matrix .repo/local_manifests || true
 
 # ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
@@ -95,11 +95,11 @@ rm -rf out/soong/.intermediates/build/soong/compliance || true
 rm -rf out/soong/compliance || true
 rm -f out/soong/build.ninja || true
 
-# FIX: Android 16 ফরম্যাট অনুযায়ী লাঞ্চ কমান্ড
-lunch infinity_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
+# FIX: Matrixx লাঞ্চ কমান্ড (আপডেট করা হয়েছে)
+lunch matrixx_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
 
-# ফাইনাল কম্পাইলেশন কমান্ড
-m bacon -j$(nproc)
+# ফাইনাল কম্পাইলেশন কমান্ড (Matrixx এর জন্য আপডেট করা হয়েছে)
+crave run -- make matrixx -j$(nproc)
