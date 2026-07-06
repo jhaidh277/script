@@ -89,11 +89,6 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# 🎯 [CRITICAL CLEANUP] পরিষ্কার করা
-echo "Performing Deep Soong/Ninja cache cleanup..."
-rm -rf out/soong/.intermediates/build/soong/compliance || true
-rm -rf out/soong/compliance || true
-rm -f out/soong/build.ninja || true
 
 # FIX: Android 16 ফরম্যাট অনুযায়ী লাঞ্চ কমান্ড
 lunch infinity_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
