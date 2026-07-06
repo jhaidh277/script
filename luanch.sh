@@ -18,12 +18,6 @@ export SKIP_VENDORSETUP=true
 # 🎯 FIX 3: আগের করাপ্টেড ডিরেক্টরি এবং কনফ্লিক্ট ফোর্স ক্লিন
 echo "Force cleaning corrupted directories and conflicting git hooks..."
 rm -rf .repo/local_manifests || true
-rm -rf .repo/projects/device/oneplus/sm8150-common.git || true
-rm -rf .repo/projects/vendor/oneplus/sm8150-common.git || true
-rm -rf .repo/project-objects/jhaidh277/android_device_oneplus_sm8150-common.git || true
-rm -rf .repo/project-objects/jhaidh277/vendor_oneplus_sm8150-common.git || true
-
-# সোর্স ডিরেক্টরি ক্লিন
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
 
 # ৩. Repo initialization (Updated with --depth 1 before || true as per 260.png)
