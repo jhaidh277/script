@@ -81,7 +81,7 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
 fi
 
 # FIX: Android 16 ফরম্যাট অনুযায়ী লাঞ্চ কমান্ড
-lunch matrixx_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
+lunch matrixx_hotdogb-userdebug || matrixx_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
