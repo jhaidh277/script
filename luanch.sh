@@ -65,7 +65,7 @@ rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
 # ========================================================
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=none
+export TARGET_GAPPS_PACKAGE_TYPE=true
 export TARGET_MULTISIM_CONFIG=dsds
 
 # envsetup সোর্স করা
