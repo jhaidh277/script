@@ -21,7 +21,7 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 
 # ৫. আপনার লোকাল ম্যানিফেস্ট ক্লোন
 mkdir -p .repo/local_manifests
-git clone https://github.com/jhaidh277/local_manifests --depth 1 -b main .repo/local_manifests || true
+git clone https://github.com/jhaidh277/local_manifests --depth 1 -b infi .repo/local_manifests || true
 
 # ৬. সোর্স সিঙ্ক করা
 echo "Syncing sources..."
