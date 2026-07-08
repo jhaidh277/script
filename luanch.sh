@@ -21,13 +21,13 @@ rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
 
 # ৩. Repo initialization (Updated with --depth 1 before || true as per 260.png)
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
+repo init --no-repo-verify --git-lfs -u https://github.com/Evolution-X/manifest -b cnb -g default,-mips,-darwin,-notdefault --depth 1 || true
 
 # ৪. Directory structure নিশ্চিত করা
 mkdir -p .repo/repo/hooks || true
 
 # ৫. Local manifest clone
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b infinity .repo/local_manifests || true
+git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b evo .repo/local_manifests || true
 
 # ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
@@ -85,10 +85,10 @@ fi
 
 
 # FIX: Android 16 ফরম্যাট অনুযায়ী লাঞ্চ কমান্ড
-lunch infinity_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
+lunch evolution_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
 
 # ফাইনাল কম্পাইলেশন কমান্ড
-m bacon -j$(nproc)
+m evolution -j$(nproc)
