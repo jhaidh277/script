@@ -26,7 +26,7 @@ repo init --no-repo-verify --git-lfs -u https://github.com/Evolution-X/manifest 
 # ৪. Directory structure নিশ্চিত করা
 mkdir -p .repo/repo/hooks || true
 
-# ৫. Local manifest clone
+# ৫. Local manifest clone (আপনার রিপোজিটরির সঠিক ব্রাঞ্চ "evo" ব্যবহার করা হয়েছে)
 git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b evo .repo/local_manifests || true
 
 # ৬. Crave Official Source Sync
