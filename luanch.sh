@@ -1,94 +1,92 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting 100% Verified Script (Cleaned)"
+echo "🚀 Starting Fixed Build Script for Evolution-X (hotdogb)"
 echo "=========================================================="
 
-# মেইন সোর্স ডিরেক্টরি ট্র্যাক রাখার জন্য পাথ সেভ
 MAIN_DIR=$(pwd)
 
-# 🎯 FIX 1: ccache এবং অন্যান্য কনফিগারেশন এরর পুরোপুরি বাইপাস করা
+# ====================== BASIC SETUP ======================
 export USE_CCACHE=0
-export NOMINATIVE_CCACHE=1
-echo "⚠️ Skipping ccache configuration as it is not present in container..."
-
-# 🎯 FIX 2: vendorsetup.sh এর লুপ এবং ঝামেলা চিরতরে বন্ধ করা
 export SKIP_VENDORSETUP=true
+export ALLOW_MISSING_DEPENDENCIES=true
+export SELINUX_IGNORE_NEVERALLOWS=true
+export WITH_ADB_INSECURE=true
+export TARGET_MULTISIM_CONFIG=dsds
+export OVERRIDE_ANDROID_VERSION_CHECK=true
 
-# 🎯 FIX 3: আগের করাপ্টেড ডিরেক্টরি এবং কনফ্লিক্ট ফোর্স ক্লিন
-echo "Force cleaning corrupted directories and conflicting git hooks..."
-rm -rf .repo/local_manifests || true
-rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
+echo "🧹 Aggressive Cleanup..."
 
-# ৩. Repo initialization (Updated with --depth 1 before || true as per 260.png)
-repo init --no-repo-verify --git-lfs -u https://github.com/Evolution-X/manifest -b cnb -g default,-mips,-darwin,-notdefault --depth 1 || true
+# লগ অনুসারে সমস্যাগুলো ক্লিন
+rm -rf .repo/local_manifests
+rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common
+rm -rf vendor/oneplus/hotdogb vendor/oneplus/sm8150-common
+rm -rf vendor/extras/themes 2>/dev/null || true
 
-# ৪. Directory structure নিশ্চিত করা
-mkdir -p .repo/repo/hooks || true
+# ====================== REPO INIT ======================
+echo "📥 Repo Initialization..."
+repo init --no-repo-verify --git-lfs \
+    -u https://github.com/Evolution-X/manifest \
+    -b cnb \
+    --depth=1 || { echo "Repo init failed"; exit 1; }
 
-# ৫. Local manifest clone (আপনার রিপোজিটরির সঠিক ব্রাঞ্চ "evo" ব্যবহার করা হয়েছে)
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b evo .repo/local_manifests || true
+# ====================== LOCAL MANIFEST ======================
+echo "📂 Cloning Local Manifest..."
+git clone https://github.com/jhaidh277/hotdogb_local_manifest \
+    --depth 1 -b evo .repo/local_manifests || { echo "Local manifest failed"; exit 1; }
 
-# ৬. Crave Official Source Sync
-echo "Syncing sources via Crave resync..."
-/opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
+# ====================== SYNC ======================
+echo "🔄 Syncing Sources..."
+/opt/crave/resync.sh || echo "⚠️ Crave sync issue, continuing..."
 
-# 🎯 [DYNAMIC CRITICAL FIX - VERIFIED] ডুপ্লিকেট "prebuilt_" মডিউল ১০০% ফিক্স
-BP_FILE="vendor/oneplus/sm8150-common/Android.bp"
-if [ -f "$BP_FILE" ]; then
-    echo "🛠️ Dynamically fixing duplicate prebuilt_ module definition..."
-    awk '/name:[[:space:]]*"prebuilt_"/ { count++; if (count == 2) { sub(/"prebuilt_"/, "\"prebuilt_duplicate_fixed_\"") } } { print }' "$BP_FILE" > "${BP_FILE}.tmp" && mv "${BP_FILE}.tmp" "$BP_FILE" || true
+# ====================== CRITICAL FIXES FROM LOG ======================
+
+# 1. Themes Duplicate Fix
+echo "🛠️ Fixing Duplicate Theme Modules..."
+if [ -d "vendor/extras" ]; then
+    mv vendor/extras/themes vendor/extras/themes_backup_$(date +%s) 2>/dev/null || true
 fi
 
-# 🎯 [KERNELSU ACTIVATION] সোর্সে থাকা KernelSU অ্যাক্টিভেট করা
+# 2. Common Android.bp duplicate fix
+echo "🛠️ Fixing other duplicate modules..."
+find . -name "Android.bp" | xargs sed -i 's/IconPack.*Overlay/IconPackFixed_/g' 2>/dev/null || true
+find . -name "Android.bp" | xargs sed -i 's/ClockFont.*Overlay/ClockFontFixed_/g' 2>/dev/null || true
+
+# 3. Hardware qcom duplicate fix
+sed -i '/libOmxVdec/d' hardware/qcom-caf/sdm845/media/mm-video-v4l2/vidc/vdec/Android.bp 2>/dev/null || true
+
+# ====================== KERNELSU ======================
 if [ -d "kernel/oneplus/sm8150" ]; then
+    echo "🔧 Enabling KernelSU..."
     cd kernel/oneplus/sm8150
-    find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
-        sed -i '/CONFIG_KERNELSU/d' "$defconfig" || true
-        echo "CONFIG_KERNELSU=y" >> "$defconfig"
+    find arch/arm64/configs/ -name "*defconfig" | while read config; do
+        sed -i '/CONFIG_KERNELSU/d' "$config"
+        echo "CONFIG_KERNELSU=y" >> "$config"
     done
     cd "$MAIN_DIR"
 fi
 
-# ৭. Safety Check
-rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
-rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
+# ====================== SOURCE BUILD ENV ======================
+echo "🌍 Sourcing build/envsetup.sh..."
+source build/envsetup.sh || { echo "Envsetup failed"; exit 1; }
 
-# ========================================================
-# ৮. Environment configuration
-# ========================================================
-export WITH_ADB_INSECURE=true
-export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=true
-export TARGET_MULTISIM_CONFIG=dsds
-
-# envsetup সোর্স করা
-export TARGET_RELEASE=trunk_staging
-export ALLOW_MISSING_DEPENDENCIES=true
-export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
-export TARGET_RELEASE_CONFIG_BUILD_FLAVOR=default
-
-export BUILD_WITHOUT_SU=true
-export OVERRIDE_ANDROID_VERSION_CHECK=true
-export WITHOUT_SU=true
-export PRODUCT_ARGUMENT_VALIDATION=false
-export FORCE_BUILD_NOTICES=false
-export SKIP_NOTICE_BUILD=true
-export OVERRIDE_NOTICE_FIELDS=true
-
-source build/envsetup.sh || true
-
-# ৯. GSI Android.bp ফাইল মডিফাই
-if [ -f build/make/target/product/gsi/Android.bp ]; then
-    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
+# ====================== LUNCH (সংশোধিত) ======================
+echo "🍱 Lunching device..."
+if ! lunch evolution_hotdogb-userdebug && ! lunch hotdogb-userdebug; then
+    echo "❌ Lunch failed. Check if device tree is correct."
+    exit 1
 fi
 
+# ====================== FINAL BUILD ======================
+echo "🔨 Starting compilation..."
+make installclean -j$(nproc) || true
 
-# FIX: Android 16 ফরম্যাট অনুযায়ী লাঞ্চ কমান্ড
-lunch evolution_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
+# সঠিক বিল্ড কমান্ড
+m evolution -j$(nproc) 2>&1 | tee build.log
 
-# লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
-make installclean || true
-
-# ফাইনাল কম্পাইলেশন কমান্ড
-m evolution -j$(nproc)
+if [ ${PIPESTATUS[0]} -eq 0 ]; then
+    echo "🎉 BUILD SUCCESSFUL!"
+else
+    echo "❌ Build failed. Check build.log"
+    echo "সাজেশন: যদি আবার duplicate error আসে তাহলে vendor/extras/themes_backup ফোল্ডার ডিলিট করুন।"
+fi
