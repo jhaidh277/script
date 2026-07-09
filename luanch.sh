@@ -84,7 +84,7 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
 fi
 
 # FIX: লাঞ্চ কমান্ড
-lunch lineage_hotdogb-bp4a-userdebug || echo "⚠️ Lunch failed..."
+lunch lineage_hotdogb-bp4a-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
 make installclean || true
