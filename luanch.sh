@@ -8,7 +8,7 @@ MAIN_DIR=$(pwd)
 
 # ====================== ULTRA CLEAN ======================
 echo "🧹 Cleanup..."
-repo forall -c 'git reset --hard HEAD; git clean -fdx' 2>/dev/null || true
+# আপনি যে ডিলিট কমান্ডগুলো নির্দেশ করেছিলেন:
 rm -rf vendor/extras/themes* 2>/dev/null || true
 rm -rf device/oneplus/hotdogb* vendor/oneplus/hotdogb* 2>/dev/null || true
 rm -rf .repo/local_manifests
@@ -40,12 +40,9 @@ echo "# Common Evolution config" > vendor/evolution/config/common_full_phone.mk 
 # Source env
 source build/envsetup.sh || { echo "❌ Envsetup failed"; exit 1; }
 
-# Lunch
+# Lunch (আপনার দেওয়া নির্দিষ্ট কমান্ড)
 echo "🍱 Lunching..."
-lunch evolution_hotdogb-userdebug  lunch hotdogb-userdebug  {
-    echo "Trying fallback..."
-    lunch evolution_hotdogb-userdebug
-} || { echo "❌ Lunch failed"; exit 1; }
+lunch lineage_hotdogb-bp4a-userdebug || { echo "❌ Lunch failed"; exit 1; }
 
 # Build
 echo "🔨 Starting Build..."
