@@ -18,7 +18,7 @@ export SKIP_VENDORSETUP=true
 
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=true
+export TARGET_GAPPS_PACKAGE_TYPE=false
 export TARGET_MULTISIM_CONFIG=dsds
 
 echo "⚙️  Basic environment configured."
@@ -206,8 +206,8 @@ fi
 echo "🔑 Generating keys..."
 gk -s || true
 
-echo "🍽️ Lunch: axion hotdogb userdebug gms"
-axion hotdogb userdebug gms
+echo "🍽️ Lunch: axion hotdogb userdebug va"
+axion hotdogb userdebug va
 
 echo "🧼 Running installclean..."
 make installclean || true
