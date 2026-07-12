@@ -3,7 +3,7 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 Infinity‑X Build for Beryl (Xiaomi Mi A2)"
+echo "🚀 Infinity‑X Build for Beryl (redmi note 14 5g)"
 echo "=========================================================="
 
 # ১. মেইন পাথ set
