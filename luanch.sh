@@ -62,9 +62,19 @@ if ! source build/envsetup.sh; then
     exit 1
 fi
 
+echo "🧩 Creating missing kernel module list files..."
+mkdir -p device/xiaomi/beryl-kernel
+touch device/xiaomi/beryl-kernel/modules.load.vendor_ramdisk
+touch device/xiaomi/beryl-kernel/modules.load.recovery
+
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     echo "🧹 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
+fi
+
+echo "🧼 Fixing vendor/xiaomi/beryl namespace..."
+if [ -f vendor/xiaomi/beryl/Android.bp ]; then
+    sed -i 's#hardware/lineage/compat#hardware/lineage/interfaces/power#' vendor/xiaomi/beryl/Android.bp || true
 fi
 
 echo "🧼 Removing duplicate protobuf vendorcompat modules..."
