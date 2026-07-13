@@ -56,16 +56,6 @@ if [ -x /opt/crave/resync.sh ]; then
     /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding..."
 fi
 
-echo "🔧 Fixing manifest branches..."
-if [ -d .repo/local_manifests ]; then
-    find .repo/local_manifests -type f -name "*.xml" -exec sed -i \
-        -e 's/revision="lineage-22.2"/revision="alpha-15.2"/g' \
-        -e 's/branch="lineage-22.2"/branch="alpha-15.2"/g' {} +
-fi
-
-echo "🔄 Syncing sources..."
-repo sync -j1 --fail-fast --force-sync --no-tags --current-branch || exit 1
-
 echo "📦 Sourcing build/envsetup.sh ..."
 if ! source build/envsetup.sh; then
     echo "❌ Failed to source build/envsetup.sh"
