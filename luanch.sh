@@ -53,7 +53,7 @@ git clone https://github.com/jhaidh277/hotdogb_local_manifest \
 
 if [ -x /opt/crave/resync.sh ]; then
     echo "🔄 Syncing sources via Crave resync..."
-    /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding..."
+    /opt/crave/resync.sh || true
 fi
 
 echo "📦 Sourcing build/envsetup.sh ..."
@@ -67,14 +67,9 @@ mkdir -p device/xiaomi/beryl-kernel
 touch device/xiaomi/beryl-kernel/modules.load.vendor_ramdisk
 touch device/xiaomi/beryl-kernel/modules.load.recovery
 
+echo "🧼 Removing GSI Calendar entry..."
 if [ -f build/make/target/product/gsi/Android.bp ]; then
-    echo "🧹 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
-    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
-fi
-
-echo "🧼 Fixing vendor/xiaomi/beryl namespace..."
-if [ -f vendor/xiaomi/beryl/Android.bp ]; then
-    sed -i 's#hardware/lineage/compat#hardware/lineage/interfaces/power#' vendor/xiaomi/beryl/Android.bp || true
+    sed -i '/Calendar/d' build/make/target/product/gsi/Android.bp || true
 fi
 
 echo "🧼 Removing duplicate protobuf vendorcompat modules..."
@@ -83,6 +78,13 @@ if [ -f hardware/lineage/compat/Android.bp ]; then
     sed -i '/prebuilt_libprotobuf-cpp-lite-3.9.1-vendorcompat/,/}/d' hardware/lineage/compat/Android.bp || true
     sed -i '/prebuilt_libprotobuf-cpp-full-21.12-vendorcompat/,/}/d' hardware/lineage/compat/Android.bp || true
     sed -i '/prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat/,/}/d' hardware/lineage/compat/Android.bp || true
+fi
+
+echo "🧼 Fixing vendor/xiaomi/beryl namespace and removing errors..."
+find . -type f -name "Android.bp" -exec sed -i '/hardware\/lineage\/interfaces\/power/d' {} +
+find . -type f -name "Android.bp" -exec sed -i '/hardware\/lineage\/compat/d' {} +
+if [ -f vendor/xiaomi/beryl/Android.bp ]; then
+    sed -i 's#hardware/lineage/interfaces/power-libperfmgr#hardware/lineage/interfaces/power#g' vendor/xiaomi/beryl/Android.bp || true
 fi
 
 echo "🍽️ Trying to lunch infinity_beryl ..."
