@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 echo "=========================================================="
 echo "🚀 Infinity‑X Build for Beryl (redmi note 14 5g)"
@@ -42,7 +42,6 @@ import sys
 path, needle = sys.argv[1], sys.argv[2]
 with open(path, 'r', encoding='utf-8', errors='ignore') as f:
     lines = f.readlines()
-
 out = []
 i = 0
 n = len(lines)
@@ -61,7 +60,6 @@ while i < n:
         continue
     out.append(lines[i])
     i += 1
-
 with open(path, 'w', encoding='utf-8') as f:
     f.writelines(out)
 PY
@@ -72,6 +70,9 @@ remove_line_contains() {
     local pattern="$2"
     [ -f "$file" ] && sed -i "\|$pattern|d" "$file" || true
 }
+
+echo "🧹 Cleaning local manifests..."
+rm -rf .repo/local_manifests .repo/local_manifest.xml || true
 
 echo "🧹 Cleaning up directories..."
 rm -rf out/soong out/.module_paths out/target out/obj out/build.ninja || true
@@ -98,6 +99,7 @@ if [ -x /opt/crave/resync.sh ]; then
 fi
 
 echo "📦 Sourcing build/envsetup.sh ..."
+export TOP="$MAIN_DIR"
 if [ -f build/envsetup.sh ]; then
     # shellcheck disable=SC1091
     source build/envsetup.sh
