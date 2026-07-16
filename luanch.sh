@@ -11,6 +11,7 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/build_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee "$LOG_FILE") 2>&1
 
+# ccache না থাকলে এরর এড়াতে এটি সরাসরি ০ সেট করা হলো
 export USE_CCACHE=0
 export SKIP_VENDORSETUP=true
 export WITH_ADB_INSECURE=true
@@ -28,10 +29,6 @@ export PRODUCT_ARGUMENT_VALIDATION=false
 export FORCE_BUILD_NOTICES=false
 export SKIP_NOTICE_BUILD=true
 export OVERRIDE_NOTICE_FIELDS=true
-
-if command -v ccache >/dev/null 2>&1; then
-    export USE_CCACHE=1
-fi
 
 safe_remove_block() {
     local file="$1"
@@ -101,7 +98,6 @@ fi
 echo "📦 Sourcing build/envsetup.sh ..."
 export TOP="$MAIN_DIR"
 if [ -f build/envsetup.sh ]; then
-    # shellcheck disable=SC1091
     source build/envsetup.sh
 else
     echo "❌ Failed to source build/envsetup.sh"
