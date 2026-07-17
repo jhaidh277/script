@@ -111,10 +111,7 @@ fi
 
 echo "🧼 Removing duplicate protobuf vendorcompat modules..."
 for file in "hardware/lineage/compat/Android.bp" "prebuilts/misc/protobuf_vendorcompat/Android.bp"; do
-    safe_remove_block "$file" "prebuilt_libprotobuf-cpp-full-3.9.1-vendorcompat"
-    safe_remove_block "$file" "prebuilt_libprotobuf-cpp-lite-3.9.1-vendorcompat"
-    safe_remove_block "$file" "prebuilt_libprotobuf-cpp-full-21.12-vendorcompat"
-    safe_remove_block "$file" "prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat"
+    sed -i '/prebuilt_libprotobuf-cpp/d' "$file" || true
 done
 
 echo "🧼 Fixing vendor/xiaomi/beryl and sensors namespace..."
@@ -127,7 +124,7 @@ fi
 if [ -f hardware/mediatek/sensors/Android.bp ]; then
     remove_line_contains "hardware/mediatek/sensors/Android.bp" "hardware/lineage/interfaces/power"
     remove_line_contains "hardware/mediatek/sensors/Android.bp" "hardware/lineage/compat"
-    safe_remove_block "hardware/mediatek/sensors/Android.bp" "android.hardware.sensors@2.0-subhal-impl-1.0"
+    sed -i '/android.hardware.sensors@2.0-subhal-impl-1.0/d' hardware/mediatek/sensors/Android.bp || true
 fi
 
 echo "🍽️ Trying to lunch infinity_beryl ..."
