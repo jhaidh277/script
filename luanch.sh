@@ -12,7 +12,8 @@ LOG_FILE="$LOG_DIR/build_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee "$LOG_FILE") 2>&1
 
 # ========= Env vars =========
-export USE_CCACHE=0          # আমরা ccache force বন্ধ রাখছি
+export USE_CCACHE=0
+export CCACHE_DISABLE=1
 export SKIP_VENDORSETUP=true
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
@@ -30,19 +31,11 @@ export FORCE_BUILD_NOTICES=false
 export SKIP_NOTICE_BUILD=true
 export OVERRIDE_NOTICE_FIELDS=true
 
-# ========= ccache workaround =========
-if command -v ccache >/dev/null 2>&1; then
-    echo "✅ Real ccache found, enabling it."
-    export USE_CCACHE=1
-    export CCACHE_EXEC="$(command -v ccache)"
-else
-    echo "⚠️ ccache not found, using stub to satisfy envsetup.sh."
-    # envsetup.sh শুধু command আছে কি না দেখলে, এই alias সেটি pass করবে
-    alias ccache='echo "ccache stub (no real caching)"; true'
-    export USE_CCACHE=0
-fi
+echo "⚠️ ccache disabled."
+export PATH="$(echo "$PATH" | tr ':' '
+' | grep -v '/usr/lib/ccache' | paste -sd: -)"
+hash -r || true
 
-# ========= helper ফাংশন =========
 safe_remove_block() {
     local file="$1"
     local needle="$2"
@@ -78,20 +71,17 @@ PY
 remove_line_contains() {
     local file="$1"
     local pattern="$2"
-    [ -f "$file" ] && sed -i "\|$pattern|d" "$file" || true
+    [ -f "$file" ] && sed -i "|$pattern|d" "$file" || true
 }
 
 fix_android_products_mk() {
     local file="$1"
     local device="$2"
-
     [ -d "$(dirname "$file")" ] || return 0
-
     python3 - "$file" "$device" <<'PY'
 import sys, os
 file_path, device = sys.argv[1], sys.argv[2]
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
 content = f'''PRODUCT_MAKEFILES := \\
     $(LOCAL_DIR)/{device}.mk
 
@@ -100,20 +90,17 @@ COMMON_LUNCH_CHOICES := \\
     {device}-userdebug \\
     {device}-eng
 '''
-
 with open(file_path, 'w', encoding='utf-8') as f:
     f.write(content)
 PY
 }
 
-# ========= clean local manifest + out =========
 echo "🧹 Cleaning local manifests..."
 rm -rf .repo/local_manifests .repo/local_manifest.xml || true
 
 echo "🧹 Cleaning up output directories..."
 rm -rf out/soong out/.module_paths out/target out/obj out/build.ninja || true
 
-# ========= repo init + local manifest =========
 echo "📥 Running repo init for Infinity-X (branch 16)..."
 repo init --no-repo-verify --git-lfs \
           -u https://github.com/ProjectInfinity-X/manifest \
@@ -135,8 +122,8 @@ if [ -x /opt/crave/resync.sh ]; then
     /opt/crave/resync.sh
 fi
 
-# ========= envsetup =========
 echo "📦 Sourcing build/envsetup.sh ..."
+export TOP="$MAIN_DIR"
 if [ -f build/envsetup.sh ]; then
     # shellcheck disable=SC1091
     source build/envsetup.sh
@@ -145,24 +132,20 @@ else
     exit 1
 fi
 
-# ========= AndroidProducts.mk auto-fix =========
 echo "🧩 Fixing AndroidProducts.mk for infinity_beryl..."
 fix_android_products_mk "device/xiaomi/beryl/AndroidProducts.mk" "infinity_beryl"
 
-# ========= kernel modules.load fix =========
 echo "🧩 Creating missing kernel module list files..."
 mkdir -p device/xiaomi/beryl-kernel
 : > device/xiaomi/beryl-kernel/modules.load
 : > device/xiaomi/beryl-kernel/modules.load.vendor_ramdisk
 : > device/xiaomi/beryl-kernel/modules.load.recovery
 
-# ========= GSI Calendar clean =========
 echo "🧼 Removing GSI Calendar entry..."
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     remove_line_contains "build/make/target/product/gsi/Android.bp" "Calendar"
 fi
 
-# ========= protobuf vendorcompat duplicate clean =========
 echo "🧼 Removing duplicate protobuf vendorcompat modules..."
 safe_remove_block "hardware/lineage/compat/Android.bp" "prebuilt_libprotobuf-cpp-full-3.9.1-vendorcompat"
 safe_remove_block "hardware/lineage/compat/Android.bp" "prebuilt_libprotobuf-cpp-lite-3.9.1-vendorcompat"
@@ -173,7 +156,6 @@ safe_remove_block "prebuilts/misc/protobuf_vendorcompat/Android.bp" "prebuilt_li
 safe_remove_block "prebuilts/misc/protobuf_vendorcompat/Android.bp" "prebuilt_libprotobuf-cpp-full-21.12-vendorcompat"
 safe_remove_block "prebuilts/misc/protobuf_vendorcompat/Android.bp" "prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat"
 
-# ========= vendor / sensors namespace + duplicate fix =========
 echo "🧼 Fixing vendor/xiaomi/beryl namespace and removing errors..."
 if [ -f vendor/xiaomi/beryl/Android.bp ]; then
     remove_line_contains "vendor/xiaomi/beryl/Android.bp" "hardware/lineage/interfaces/power"
@@ -190,7 +172,6 @@ fi
 echo "🧼 Cleaning stale soong output..."
 rm -rf out/soong out/.module_paths out/build.ninja || true
 
-# ========= lunch =========
 echo "🍽️ Trying to lunch infinity_beryl ..."
 LUNCH_OK=0
 for TARGET in infinity_beryl-user infinity_beryl-userdebug infinity_beryl-eng; do
@@ -206,7 +187,6 @@ if [ "$LUNCH_OK" -ne 1 ]; then
     exit 1
 fi
 
-# ========= build =========
 echo "🧼 Running installclean..."
 make installclean || true
 
