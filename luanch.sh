@@ -1,99 +1,27 @@
 #!/bin/bash
-set -euo pipefail
+
+set -e
 
 echo "=========================================================="
 echo "🚀 Infinity‑X Build for Beryl (redmi note 14 5g)"
 echo "=========================================================="
 
-MAIN_DIR="$(pwd)"
-LOG_DIR="$MAIN_DIR/output_logs"
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/build_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee "$LOG_FILE") 2>&1
+MAIN_DIR=$(pwd)
 
-# ========= Env vars =========
+# ---------------------------------------------------------
+# 1. Environment basics
+# ---------------------------------------------------------
+
 export USE_CCACHE=0
-export CCACHE_DISABLE=1
+export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
+
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=true
+export TARGET_GAPPS_PACKAGE_TYPE=false
 export TARGET_MULTISIM_CONFIG=dsds
-export TARGET_RELEASE=trunk_staging
-export ALLOW_MISSING_DEPENDENCIES=true
-export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
-export TARGET_RELEASE_CONFIG_BUILD_FLAVOR=default
-export BUILD_WITHOUT_SU=true
-export OVERRIDE_ANDROID_VERSION_CHECK=true
-export WITHOUT_SU=true
-export PRODUCT_ARGUMENT_VALIDATION=false
-export FORCE_BUILD_NOTICES=false
-export SKIP_NOTICE_BUILD=true
-export OVERRIDE_NOTICE_FIELDS=true
 
-echo "⚠️ ccache disabled."
-export PATH="$(echo "$PATH" | tr ':' '
-' | grep -v '/usr/lib/ccache' | paste -sd: -)"
-hash -r || true
-
-safe_remove_block() {
-    local file="$1"
-    local needle="$2"
-    [ -f "$file" ] || return 0
-    python3 - "$file" "$needle" <<'PY'
-import sys
-path, needle = sys.argv[1], sys.argv[2]
-with open(path, 'r', encoding='utf-8', errors='ignore') as f:
-    lines = f.readlines()
-out = []
-i = 0
-n = len(lines)
-while i < n:
-    if needle in lines[i]:
-        depth = 0
-        started = False
-        while i < n:
-            line = lines[i]
-            depth += line.count('{')
-            depth -= line.count('}')
-            started = True
-            i += 1
-            if started and depth <= 0 and line.strip().endswith('}'):
-                break
-        continue
-    out.append(lines[i])
-    i += 1
-with open(path, 'w', encoding='utf-8') as f:
-    f.writelines(out)
-PY
-}
-
-remove_line_contains() {
-    local file="$1"
-    local pattern="$2"
-    [ -f "$file" ] && sed -i "|$pattern|d" "$file" || true
-}
-
-fix_android_products_mk() {
-    local file="$1"
-    local device="$2"
-    [ -d "$(dirname "$file")" ] || return 0
-    python3 - "$file" "$device" <<'PY'
-import sys, os
-file_path, device = sys.argv[1], sys.argv[2]
-os.makedirs(os.path.dirname(file_path), exist_ok=True)
-content = f'''PRODUCT_MAKEFILES := \\
-    $(LOCAL_DIR)/{device}.mk
-
-COMMON_LUNCH_CHOICES := \\
-    {device}-user \\
-    {device}-userdebug \\
-    {device}-eng
-'''
-with open(file_path, 'w', encoding='utf-8') as f:
-    f.write(content)
-PY
-}
+echo "⚙️  Basic environment configured."
 
 echo "🧹 Cleaning local manifests..."
 rm -rf .repo/local_manifests .repo/local_manifest.xml || true
