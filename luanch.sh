@@ -77,11 +77,9 @@ PY
 echo "🧹 Cleaning local manifests..."
 rm -rf .repo/local_manifests .repo/local_manifest.xml || true
 
-echo "🧹 Cleaning up output directories..."
-rm -rf out/soong out/.module_paths out/target out/obj out/build.ninja || true
 
 echo "📥 Running repo init for Infinity-X (branch 16)..."
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
 
 mkdir -p .repo/repo/hooks || true
 
