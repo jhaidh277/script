@@ -3,7 +3,7 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 AxionOS hotdogb Auto-Build (with Wi-Fi auto-fix)"
+echo "🚀matrixx hotdogb Auto-Build (with Wi-Fi auto-fix)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
