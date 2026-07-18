@@ -203,9 +203,6 @@ fi
 # 10. Build commands
 # ---------------------------------------------------------
 
-echo "🔑 Generating keys..."
-gk -s || true
-
 echo "🍽️ Lunch: matrixx_hotdogb-userdebug"
 lunch matrixx_hotdogb-userdebug
 
