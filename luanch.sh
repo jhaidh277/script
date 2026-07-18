@@ -34,9 +34,9 @@ rm -rf .repo/local_manifests || true
 # 3. Repo init + local manifest + sync
 # ---------------------------------------------------------
 
-echo "📥 Running repo init for AxionOS..."
-repo init -u https://github.com/AxionAOSP/android.git \
-          -b lineage-23.2 \
+echo "📥 Running repo init for ProjectMatrixx..."
+repo init -u https://github.com/ProjectMatrixx/android.git \
+          -b 16.2 \
           --git-lfs \
           --depth 1 || true
 
@@ -45,7 +45,7 @@ mkdir -p .repo/repo/hooks || true
 echo "📥 Cloning local manifest for hotdogb..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest \
           --depth 1 \
-          -b axion \
+          -b matrix \
           .repo/local_manifests || true
 
 if [ -x /opt/crave/resync.sh ]; then
@@ -206,15 +206,11 @@ fi
 echo "🔑 Generating keys..."
 gk -s || true
 
-echo "🍽️ Lunch: axion hotdogb userdebug va"
-axion hotdogb userdebug va
+echo "🍽️ Lunch: matrixx_hotdogb-userdebug"
+lunch matrixx_hotdogb-userdebug
 
 echo "🧼 Running installclean..."
 make installclean || true
 
-echo "🏗️ Starting AxionOS build..."
-ax -br -j$(nproc)
-
-echo "=========================================================="
-echo "✅ Auto-build script finished (check above for any errors)."
-echo "=========================================================="
+echo "🏗️ Starting Matrixx build..."
+make matrixx -j$(nproc)
