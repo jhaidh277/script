@@ -109,6 +109,11 @@ soong_namespace {
 EOF
 fi
 
+echo "🧼 Fixing vibrator effect libc++fs dependency..."
+if [ -f hardware/xiaomi/vibrator/effect/Android.bp ]; then
+    sed -i 's/"libc++fs"/"libc++"/g' hardware/xiaomi/vibrator/effect/Android.bp || true
+fi
+
 echo "🍽️ Trying to lunch infinity_beryl ..."
 lunch infinity_beryl-userdebug
 
