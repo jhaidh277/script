@@ -45,7 +45,7 @@ mkdir -p .repo/repo/hooks || true
 echo "📥 Cloning local manifest for hotdogb..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest \
           --depth 1 \
-          -b matrixx \
+          -b matrix \
           .repo/local_manifests || true
 
 if [ -x /opt/crave/resync.sh ]; then
