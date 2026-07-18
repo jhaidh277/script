@@ -84,14 +84,6 @@ mkdir -p device/xiaomi/beryl-kernel
 : > device/xiaomi/beryl-kernel/modules.load.vendor_ramdisk
 : > device/xiaomi/beryl-kernel/modules.load.recovery
 
-echo "🧼 Fixing touch HAL Android.bp dependency..."
-if [ -f hardware/xiaomi/hidl/touch/Android.bp ]; then
-    # vendor.lineage.touch@1.0 কে vendor.lineage.touch এ পরিবর্তন করা
-    sed -i 's/"vendor.lineage.touch@1.0"/"vendor.lineage.touch"/g' hardware/xiaomi/hidl/touch/Android.bp
-    # মডিউল সেকশন বা অন্য কোনো রেফারেন্স থাকলে তা ঠিক করা
-    sed -i 's/"vendor.lineage.touch@1.0-service.xiaomi"/"vendor.lineage.touch-service.xiaomi"/g' hardware/xiaomi/hidl/touch/Android.bp || true
-fi
-
 echo "🧼 Removing GSI Calendar entry..."
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     remove_line_contains "build/make/target/product/gsi/Android.bp" "Calendar"
@@ -106,7 +98,8 @@ echo "🧼 Fixing vendor/xiaomi/beryl and sensors namespace..."
 if [ -f vendor/xiaomi/beryl/Android.bp ]; then
     remove_line_contains "vendor/xiaomi/beryl/Android.bp" "hardware/lineage/interfaces/power"
     remove_line_contains "vendor/xiaomi/beryl/Android.bp" "hardware/lineage/compat"
-    sed -i 's#hardware/lineage/interfaces/power-libperfmgr#hardware/lineage/interfaces/power#g' vendor/xiaomi/beryl/Android.bp || true
+    sed -i 's#hardware/lineage/interfaces/power-libperfmgr#hardware/lineage/interfaces/power#g' \
+        vendor/xiaomi/beryl/Android.bp || true
 fi
 
 # Sensors Android.bp ব্র্যাকেট/EOF এরর এড়াতে মিনিমাল Soong ফাইল
@@ -120,6 +113,12 @@ fi
 echo "🧼 Fixing vibrator effect libc++fs dependency..."
 if [ -f hardware/xiaomi/vibrator/effect/Android.bp ]; then
     sed -i 's/"libc++fs"/"libc++"/g' hardware/xiaomi/vibrator/effect/Android.bp || true
+fi
+
+echo "🧼 Fixing vendor.lineage.touch HIDL dependency..."
+if [ -f hardware/xiaomi/hidl/touch/Android.bp ]; then
+    sed -i 's/"vendor.lineage.touch@1.0"/"vendor.lineage.touch"/g' \
+        hardware/xiaomi/hidl/touch/Android.bp || true
 fi
 
 echo "🍽️ Trying to lunch infinity_beryl ..."
