@@ -84,6 +84,14 @@ mkdir -p device/xiaomi/beryl-kernel
 : > device/xiaomi/beryl-kernel/modules.load.vendor_ramdisk
 : > device/xiaomi/beryl-kernel/modules.load.recovery
 
+echo "🧼 Fixing touch HAL Android.bp dependency..."
+if [ -f hardware/xiaomi/hidl/touch/Android.bp ]; then
+    # vendor.lineage.touch@1.0 কে vendor.lineage.touch এ পরিবর্তন করা
+    sed -i 's/"vendor.lineage.touch@1.0"/"vendor.lineage.touch"/g' hardware/xiaomi/hidl/touch/Android.bp
+    # মডিউল সেকশন বা অন্য কোনো রেফারেন্স থাকলে তা ঠিক করা
+    sed -i 's/"vendor.lineage.touch@1.0-service.xiaomi"/"vendor.lineage.touch-service.xiaomi"/g' hardware/xiaomi/hidl/touch/Android.bp || true
+fi
+
 echo "🧼 Removing GSI Calendar entry..."
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     remove_line_contains "build/make/target/product/gsi/Android.bp" "Calendar"
