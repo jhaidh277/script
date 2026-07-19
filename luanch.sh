@@ -102,7 +102,7 @@ if [ -f vendor/xiaomi/beryl/Android.bp ]; then
         vendor/xiaomi/beryl/Android.bp || true
 fi
 
-# Sensors Android.bp ব্র্যাকেট/EOF এরর এড়াতে মিনিমাল Soong ফাইল
+# Sensors Android.bp ব্র্যাকেট/EOF এরর এড়াতে মিনিমাল Soong ফাইল
 if [ -d hardware/mediatek/sensors ]; then
     cat <<EOF > hardware/mediatek/sensors/Android.bp
 soong_namespace {
@@ -119,6 +119,17 @@ echo "🧼 Fixing vendor.lineage.touch HIDL dependency..."
 if [ -f hardware/xiaomi/hidl/touch/Android.bp ]; then
     sed -i 's/"vendor.lineage.touch@1.0"/"vendor.lineage.touch"/g' \
         hardware/xiaomi/hidl/touch/Android.bp || true
+fi
+
+# ---------------------------------------------------------
+# 11. Fixing missing Bluetooth Audio dependencies
+# ---------------------------------------------------------
+echo "🧼 Fixing missing Bluetooth Audio dependencies in vendor/xiaomi/beryl/Android.bp..."
+if [ -f "vendor/xiaomi/beryl/Android.bp" ]; then
+    sed -i '/vendor.mediatek.hardware.bluetooth.audio@2.1/d' vendor/xiaomi/beryl/Android.bp || true
+    sed -i '/vendor.mediatek.hardware.bluetooth.audio@2.2/d' vendor/xiaomi/beryl/Android.bp || true
+    sed -i 's/"vendor.mediatek.hardware.bluetooth.audio@2.1",//g' vendor/xiaomi/beryl/Android.bp || true
+    sed -i 's/"vendor.mediatek.hardware.bluetooth.audio@2.2",//g' vendor/xiaomi/beryl/Android.bp || true
 fi
 
 echo "🍽️ Trying to lunch infinity_beryl ..."
