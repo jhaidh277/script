@@ -218,3 +218,28 @@ ax -br -j$(nproc)
 echo "=========================================================="
 echo "✅ Auto-build script finished (check above for any errors)."
 echo "=========================================================="
+
+# আপনার টেলিগ্রাম আপলোড টুলের পাথ এবং চ্যাট আইডি সেট করুন
+TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
+# এখানে আপনার টেলিগ্রাম চ্যাট আইডি বা ইউজারনেম দিন (যেমন: @username বা চ্যানেল/গ্রুপ আইডি)
+CHAT_ID="@jihad099012" 
+
+# বিল্ড আউটপুট ফোল্ডার থেকে সদ্য তৈরি হওয়া রমের জিপ ফাইলটি খুঁজে বের করা
+# সাধারণত আউটপুট ফাইল out/target/product/<device>/ নিচে থাকে
+OUT_DIR="out/target/product/hotdogb"
+ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
+
+if [ -f "$ZIP_FILE" ]; then
+    echo "ROM build successful! Starting automatic Telegram upload..."
+    
+    # টেলিগ্রামে ফাইল আপলোড করার কমান্ড
+    $TELEGRAM_BIN --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE"
+    
+    if [ $? -eq 0 ]; then
+        echo "Successfully uploaded to Telegram!"
+    else
+        echo "Telegram upload failed!"
+    fi
+else
+    echo "Error: ROM zip file not found in $OUT_DIR!"
+fi
