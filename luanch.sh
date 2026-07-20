@@ -6,14 +6,14 @@ echo "=========================================================="
 echo "🚀 AxionOS hotdogb Auto-Build (with Wi-Fi auto-fix)"
 echo "=========================================================="
 
-MAIN_DIR=$(pwd)
+MAIN_DIR="$(pwd)"
 
 # ---------------------------------------------------------
 # 1. Environment basics
 # ---------------------------------------------------------
 
 export USE_CCACHE=0
-export NOMINATIVE_CCACHE=1
+export NOMINATIVE_CCACHE=1   # optional / non-standard, চাইলে বাদ দিতে পারো
 export SKIP_VENDORSETUP=true
 
 export WITH_ADB_INSECURE=true
@@ -51,7 +51,6 @@ git clone https://github.com/jhaidh277/hotdogb_local_manifest \
 if [ -x /opt/crave/resync.sh ]; then
     echo "🔄 Syncing sources via Crave resync..."
     /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue..."
-
 fi
 
 # ---------------------------------------------------------
@@ -63,12 +62,12 @@ if [ -f "$BP_FILE" ]; then
     echo "🔍 Checking for duplicate prebuilt_ module definitions..."
     COUNT=$(grep -c 'name:[[:space:]]*"prebuilt_"' "$BP_FILE" || true)
     if [ "$COUNT" -gt 1 ]; then
-        echo "⚠️ Found $COUNT occurrences of name: "prebuilt_". Applying safe rename on 2nd occurrence."
+        echo "⚠️ Found $COUNT occurrences of name: \"prebuilt_\". Applying safe rename on 2nd occurrence."
         awk '
             /name:[[:space:]]*"prebuilt_"/ {
                 count++;
                 if (count == 2) {
-                    sub(/"prebuilt_"/, ""prebuilt_duplicate_fixed_"")
+                    sub(/"prebuilt_"/, "\"prebuilt_duplicate_fixed_\"")
                 }
             }
             { print }
@@ -153,21 +152,18 @@ if [ "$BOARD_WLAN_DEVICE_VALUE" = "qcwcn" ]; then
         echo "   [Auto-fix] Adding libwifi-hal-qcom to vendor impl defaults (if applicable)..."
 
         if [ -f "$WIFI_BP" ]; then
-            # খুব টার্গেটেড patch: vendor_impl_defaults ব্লকে qcom HAL add করা
             python3 - << 'EOF'
-import re, pathlib
+import pathlib, re
 
 bp = pathlib.Path("frameworks/opt/net/wifi/libwifi_hal/Android.bp")
 text = bp.read_text()
 
-pattern = r'(cc_defaults(
-s*name:s*"libwifi_hal_vendor_impl_defaults",[sS]*?shared_libs:s*[[sS]*?])'
+pattern = r'(cc_defaults\s*\{\s*name:\s*"libwifi_hal_vendor_impl_defaults",[\s\S]*?shared_libs:\s*\[[\s\S]*?\])'
 m = re.search(pattern, text)
 if m:
     block = m.group(0)
     if 'libwifi-hal-qcom' not in block:
-        new_block = block.replace('shared_libs: [', 'shared_libs: [
-        "libwifi-hal-qcom",')
+        new_block = block.replace('shared_libs: [', 'shared_libs: [\n        "libwifi-hal-qcom",')
         text = text.replace(block, new_block)
         bp.write_text(text)
         print("Added libwifi-hal-qcom to libwifi_hal_vendor_impl_defaults shared_libs.")
@@ -213,33 +209,32 @@ echo "🧼 Running installclean..."
 make installclean || true
 
 echo "🏗️ Starting AxionOS build..."
-ax -br -j$(nproc)
+ax -br -j"$(nproc)"
 
 echo "=========================================================="
 echo "✅ Auto-build script finished (check above for any errors)."
 echo "=========================================================="
 
-# আপনার টেলিগ্রাম আপলোড টুলের পাথ এবং চ্যাট আইডি সেট করুন
-TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
-# এখানে আপনার টেলিগ্রাম চ্যাট আইডি বা ইউজারনেম দিন (যেমন: @username বা চ্যানেল/গ্রুপ আইডি)
-CHAT_ID="@jihad099012" 
+# ---------------------------------------------------------
+# 11. Telegram auto-upload
+# ---------------------------------------------------------
 
-# বিল্ড আউটপুট ফোল্ডার থেকে সদ্য তৈরি হওয়া রমের জিপ ফাইলটি খুঁজে বের করা
-# সাধারণত আউটপুট ফাইল out/target/product/<device>/ নিচে থাকে
+TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
+CHAT_ID="@jihad099012"
+
 OUT_DIR="out/target/product/hotdogb"
 ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
     echo "ROM build successful! Starting automatic Telegram upload..."
-    
-    # টেলিগ্রামে ফাইল আপলোড করার কমান্ড
+
     $TELEGRAM_BIN --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE"
-    
+
     if [ $? -eq 0 ]; then
-        echo "Successfully uploaded to Telegram!"
+        echo "✅ Successfully uploaded to Telegram!"
     else
-        echo "Telegram upload failed!"
+        echo "⚠️ Telegram upload failed!"
     fi
 else
-    echo "Error: ROM zip file not found in $OUT_DIR!"
+    echo "⚠️ Error: ROM zip file not found in $OUT_DIR!"
 fi
