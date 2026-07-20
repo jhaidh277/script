@@ -117,6 +117,25 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
+
+echo "🧼 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
+if [ -f build/make/target/product/gsi/Android.bp ]; then
+    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
+fi
+
+echo "🧼 Removing duplicate privapp-permissions-dolby.xml references..."
+for f in \
+    "device/oneplus/hotdogb/Android.mk" \
+    "device/oneplus/hotdogb/device.mk" \
+    "vendor/oneplus/hotdogb/hotdogb-vendor.mk" \
+    "vendor/oneplus/sm8150-common/sm8150-common-vendor.mk"
+do
+    if [ -f "$f" ]; then
+        sed -i '/privapp-permissions-dolby.xml/d' "$f" || true
+        echo "Cleaned: $f"
+    fi
+done
+
 # ---------------------------------------------------------
 # 9. Wi-Fi HAL auto-fix logic (minimal, board-aware)
 # ---------------------------------------------------------
