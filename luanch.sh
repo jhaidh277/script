@@ -1,4 +1,4 @@
-#!/bin/bash
+\#!/bin/bash
 
 set -e
 
@@ -13,7 +13,7 @@ MAIN_DIR="$(pwd)"
 # ---------------------------------------------------------
 
 export USE_CCACHE=0
-export NOMINATIVE_CCACHE=1   # optional / non-standard, চাইলে বাদ দিতে পারো
+export NOMINATIVE_CCACHE=1   # optional / non-standard
 export SKIP_VENDORSETUP=true
 
 export WITH_ADB_INSECURE=true
@@ -109,16 +109,10 @@ if ! source build/envsetup.sh; then
 fi
 
 # ---------------------------------------------------------
-# 8. Small GSI cleanup
+# 8. Small GSI cleanup + Dolby privapp fix
 # ---------------------------------------------------------
 
-if [ -f build/make/target/product/gsi/Android.bp ]; then
-    echo "🧹 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
-    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
-fi
-
-
-echo "🧼 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
+echo "🧹 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
@@ -159,11 +153,9 @@ fi
 
 echo "ℹ️ BOARD_WLAN_DEVICE from BoardConfig: ${BOARD_WLAN_DEVICE_VALUE}"
 
-# Only try to auto-fix if BOARD_WLAN_DEVICE is qcwcn (qcom path)
 if [ "$BOARD_WLAN_DEVICE_VALUE" = "qcwcn" ]; then
     echo "ℹ️ Detected qcwcn (Qualcomm) Wi-Fi device, checking libwifi-hal-qcom..."
 
-    # 1) Check if libwifi-hal-qcom is referenced in Wi-Fi HAL Android.bp
     if [ -f "$WIFI_BP" ] && grep -q 'libwifi-hal-qcom' "$WIFI_BP"; then
         echo "✅ libwifi-hal-qcom is referenced in libwifi_hal/Android.bp"
     else
@@ -194,7 +186,6 @@ EOF
         fi
     fi
 
-    # 2) Check for libwifi-hal-qcom module existence in hardware wlan dirs
     FOUND_MODULE=0
     for d in "${HARDWARE_WLAN_DIRS[@]}"; do
         if [ -d "$d" ]; then
