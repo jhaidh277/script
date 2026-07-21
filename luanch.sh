@@ -131,38 +131,33 @@ do
 done
 
 # ---------------------------------------------------------
-# 9. AccessibilityMenu proguard patch
+# 9. AccessibilityMenu proguard patch (Fixed)
 # ---------------------------------------------------------
 
 echo "🧩 Patching AccessibilityMenu proguard rules..."
 AM_DIR="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu"
-if [ -d "$AM_DIR" ]; then
-    cat > "$AM_DIR/proguard.flags" <<'EOF'
--keep class com.android.systemui.accessibility.accessibilitymenu.** { *; }
--dontwarn com.android.systemui.accessibility.accessibilitymenu.**
-EOF
-
-    if [ -f "$AM_DIR/Android.bp" ] && ! grep -q 'proguard_flags_files: \["proguard.flags"\]' "$AM_DIR/Android.bp"; then
-        python3 - <<'PY'
+if [ -d "$AM_DIR" ] && [ -f "$AM_DIR/Android.bp" ]; then
+    python3 - <<'PY'
 from pathlib import Path
 bp = Path("frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp")
 text = bp.read_text()
-needle = '''    optimize: {
-        enabled: true,
-        optimize: true,
-        shrink: true,
-        shrink_resources: true,
-        proguard_compatibility: false,
-    },
-'''
-insert = needle + '\n    proguard_flags_files: ["proguard.flags"],\n'
-if needle in text and 'proguard_flags_files' not in text:
-    text = text.replace(needle, insert)
-    bp.write_text(text)
-PY
-    fi
-fi
 
+# Remove incorrect property if it was added previously
+text = text.replace('    proguard_flags_files: ["proguard.flags"],\n', '')
+
+# Correct way to add inline or file-based proguard flags in Soong Android.bp
+target_str = '    optimize: {\n        enabled: true,\n        optimize: true,\n        shrink: true,\n        shrink_resources: true,\n        proguard_compatibility: false,\n    },'
+
+replacement = target_str + '\n    proguard_flags: [\n        "-keep class com.android.systemui.accessibility.accessibilitymenu.** { *; }",\n        "-dontwarn com.android.systemui.accessibility.accessibilitymenu.**",\n    ],'
+
+if target_str in text and 'proguard_flags' not in text:
+    text = text.replace(target_str, replacement)
+    bp.write_text(text)
+    print("Successfully patched AccessibilityMenu Android.bp with proguard_flags.")
+else:
+    print("Proguard flags already present or target block not found.")
+PY
+fi
 # ---------------------------------------------------------
 # 10. Wi-Fi HAL auto-fix logic (minimal, board-aware)
 # ---------------------------------------------------------
