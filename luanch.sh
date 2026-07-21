@@ -1,4 +1,4 @@
-\#!/bin/bash
+#!/bin/bash
 
 set -e
 
@@ -13,7 +13,7 @@ MAIN_DIR="$(pwd)"
 # ---------------------------------------------------------
 
 export USE_CCACHE=0
-export NOMINATIVE_CCACHE=1   # optional / non-standard
+export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
 export WITH_ADB_INSECURE=true
@@ -109,7 +109,7 @@ if ! source build/envsetup.sh; then
 fi
 
 # ---------------------------------------------------------
-# 8. Small GSI cleanup + Dolby privapp fix
+# 8. GSI cleanup + Dolby privapp fix
 # ---------------------------------------------------------
 
 echo "🧹 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
@@ -131,7 +131,40 @@ do
 done
 
 # ---------------------------------------------------------
-# 9. Wi-Fi HAL auto-fix logic (minimal, board-aware)
+# 9. AccessibilityMenu proguard patch
+# ---------------------------------------------------------
+
+echo "🧩 Patching AccessibilityMenu proguard rules..."
+AM_DIR="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu"
+if [ -d "$AM_DIR" ]; then
+    cat > "$AM_DIR/proguard.flags" <<'EOF'
+-keep class com.android.systemui.accessibility.accessibilitymenu.** { *; }
+-dontwarn com.android.systemui.accessibility.accessibilitymenu.**
+EOF
+
+    if [ -f "$AM_DIR/Android.bp" ] && ! grep -q 'proguard_flags_files: \["proguard.flags"\]' "$AM_DIR/Android.bp"; then
+        python3 - <<'PY'
+from pathlib import Path
+bp = Path("frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp")
+text = bp.read_text()
+needle = '''    optimize: {
+        enabled: true,
+        optimize: true,
+        shrink: true,
+        shrink_resources: true,
+        proguard_compatibility: false,
+    },
+'''
+insert = needle + '\n    proguard_flags_files: ["proguard.flags"],\n'
+if needle in text and 'proguard_flags_files' not in text:
+    text = text.replace(needle, insert)
+    bp.write_text(text)
+PY
+    fi
+fi
+
+# ---------------------------------------------------------
+# 10. Wi-Fi HAL auto-fix logic (minimal, board-aware)
 # ---------------------------------------------------------
 
 echo "📡 Running Wi-Fi HAL auto-check..."
@@ -206,7 +239,7 @@ else
 fi
 
 # ---------------------------------------------------------
-# 10. Build commands
+# 11. Build commands
 # ---------------------------------------------------------
 
 echo "🔑 Generating keys..."
@@ -226,7 +259,7 @@ echo "✅ Auto-build script finished (check above for any errors)."
 echo "=========================================================="
 
 # ---------------------------------------------------------
-# 11. Telegram auto-upload
+# 12. Telegram auto-upload
 # ---------------------------------------------------------
 
 TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
@@ -237,9 +270,7 @@ ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
     echo "ROM build successful! Starting automatic Telegram upload..."
-
     $TELEGRAM_BIN --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE"
-
     if [ $? -eq 0 ]; then
         echo "✅ Successfully uploaded to Telegram!"
     else
