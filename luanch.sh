@@ -131,15 +131,17 @@ do
 done
 
 # ---------------------------------------------------------
-# 9. AccessibilityMenu fix using sed
+# 9. AccessibilityMenu safe restore/cleanup
 # ---------------------------------------------------------
 
-echo "🧼 Cleaning incompatible proguard properties from AccessibilityMenu Android.bp..."
+echo "🧩 Restoring AccessibilityMenu Android.bp if needed..."
 AM_BP="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp"
 if [ -f "$AM_BP" ]; then
-    sed -i '/proguard_flags/d' "$AM_BP" || true
-    sed -i '/proguard_flags_files/d' "$AM_BP" || true
-    echo "Cleaned: $AM_BP"
+    if grep -q 'proguard_flags\|proguard_flags_files' "$AM_BP"; then
+        echo "⚠️ Unsupported proguard lines detected; restoring file from git if available..."
+        git checkout -- "$AM_BP" || true
+    fi
+    echo "✅ AccessibilityMenu checked."
 else
     echo "ℹ️ AccessibilityMenu Android.bp not found, skipping."
 fi
