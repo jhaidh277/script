@@ -131,33 +131,19 @@ do
 done
 
 # ---------------------------------------------------------
-# 9. AccessibilityMenu proguard patch (Fixed)
+# 9. AccessibilityMenu fix using sed
 # ---------------------------------------------------------
 
-echo "🧩 Patching AccessibilityMenu proguard rules..."
-AM_DIR="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu"
-if [ -d "$AM_DIR" ] && [ -f "$AM_DIR/Android.bp" ]; then
-    python3 - <<'PY'
-from pathlib import Path
-bp = Path("frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp")
-text = bp.read_text()
-
-# Remove incorrect property if it was added previously
-text = text.replace('    proguard_flags_files: ["proguard.flags"],\n', '')
-
-# Correct way to add inline or file-based proguard flags in Soong Android.bp
-target_str = '    optimize: {\n        enabled: true,\n        optimize: true,\n        shrink: true,\n        shrink_resources: true,\n        proguard_compatibility: false,\n    },'
-
-replacement = target_str + '\n    proguard_flags: [\n        "-keep class com.android.systemui.accessibility.accessibilitymenu.** { *; }",\n        "-dontwarn com.android.systemui.accessibility.accessibilitymenu.**",\n    ],'
-
-if target_str in text and 'proguard_flags' not in text:
-    text = text.replace(target_str, replacement)
-    bp.write_text(text)
-    print("Successfully patched AccessibilityMenu Android.bp with proguard_flags.")
-else:
-    print("Proguard flags already present or target block not found.")
-PY
+echo "🧼 Cleaning incompatible proguard properties from AccessibilityMenu Android.bp..."
+AM_BP="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp"
+if [ -f "$AM_BP" ]; then
+    sed -i '/proguard_flags/d' "$AM_BP" || true
+    sed -i '/proguard_flags_files/d' "$AM_BP" || true
+    echo "Cleaned: $AM_BP"
+else
+    echo "ℹ️ AccessibilityMenu Android.bp not found, skipping."
 fi
+
 # ---------------------------------------------------------
 # 10. Wi-Fi HAL auto-fix logic (minimal, board-aware)
 # ---------------------------------------------------------
@@ -265,7 +251,7 @@ ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
     echo "ROM build successful! Starting automatic Telegram upload..."
-    $TELEGRAM_BIN --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE"
+    "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE"
     if [ $? -eq 0 ]; then
         echo "✅ Successfully uploaded to Telegram!"
     else
