@@ -8,10 +8,6 @@ echo "=========================================================="
 
 MAIN_DIR="$(pwd)"
 
-# ---------------------------------------------------------
-# 0. Workspace cleanup
-# ---------------------------------------------------------
-
 echo "Cleaning workspace for hotdogb..."
 rm -rf device/oneplus/hotdogb
 rm -rf device/oneplus/sm8150-common
@@ -28,13 +24,12 @@ rm -rf out/target/product/hotdogb
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
-
 export WITH_ADB_INSECURE=true
 export SELINUX_IGNORE_NEVERALLOWS=true
 export TARGET_GAPPS_PACKAGE_TYPE=false
 export TARGET_MULTISIM_CONFIG=dsds
 
-echo "⚙️  Basic environment configured."
+echo "⚙️ Basic environment configured."
 
 # ---------------------------------------------------------
 # 2. Basic cleanup
@@ -82,8 +77,6 @@ if [ -f "$BP_FILE" ]; then
             }
             { print }
         ' "$BP_FILE" > "${BP_FILE}.tmp" && mv "${BP_FILE}.tmp" "$BP_FILE"
-    else
-        echo "✅ No duplicate prebuilt_ modules detected."
     fi
 fi
 
