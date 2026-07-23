@@ -3,7 +3,7 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 AxionOS hotdogb Auto-Build (with Wi-Fi auto-fix)"
+echo "🚀 AxionOS hotdogb Auto-Build (NO-RISK)"
 echo "=========================================================="
 
 MAIN_DIR="$(pwd)"
@@ -24,51 +24,48 @@ export TARGET_MULTISIM_CONFIG=dsds
 echo "⚙️  Basic environment configured."
 
 # ---------------------------------------------------------
-# 2. Basic cleanup (lightweight)
+# 2. Basic cleanup
 # ---------------------------------------------------------
 
-echo "🧹 Light cleanup (local_manifests only)..."
+echo "🧹 Cleaning local_manifests..."
 rm -rf .repo/local_manifests || true
 
 # ---------------------------------------------------------
-# 3. Repo init + local manifest + sync
+# 3. Repo init + local manifest
 # ---------------------------------------------------------
 
-echo "📥 Running repo init for AxionOS..."
+echo "📥 Initializing repo..."
 repo init -u https://github.com/AxionAOSP/android.git \
-          -b lineage-23.2 \
-          --git-lfs \
-          --depth 1 || true
+    -b lineage-23.2 \
+    --git-lfs \
+    --depth 1 || true
 
 mkdir -p .repo/repo/hooks || true
 
-echo "📥 Cloning local manifest for hotdogb..."
+echo "📥 Cloning local manifest..."
 git clone https://github.com/jhaidh277/hotdogb_local_manifest \
-          --depth 1 \
-          -b axion \
-          .repo/local_manifests || true
+    --depth 1 \
+    -b axion \
+    .repo/local_manifests || true
 
 if [ -x /opt/crave/resync.sh ]; then
-    echo "🔄 Syncing sources via Crave resync..."
-    /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue..."
+    echo "🔄 Running Crave resync..."
+    /opt/crave/resync.sh || echo "⚠️ Crave resync had an issue..."
 fi
 
 # ---------------------------------------------------------
-# 4. Optional: fix duplicate prebuilt_ (safe)
+# 4. Safe optional fix: duplicate prebuilt_
 # ---------------------------------------------------------
 
 BP_FILE="vendor/oneplus/sm8150-common/Android.bp"
 if [ -f "$BP_FILE" ]; then
-    echo "🔍 Checking for duplicate prebuilt_ module definitions..."
     COUNT=$(grep -c 'name:[[:space:]]*"prebuilt_"' "$BP_FILE" || true)
     if [ "$COUNT" -gt 1 ]; then
-        echo "⚠️ Found $COUNT occurrences of name: \"prebuilt_\". Applying safe rename on 2nd occurrence."
+        echo "⚠️ Duplicate prebuilt_ found, applying safe rename..."
         awk '
             /name:[[:space:]]*"prebuilt_"/ {
-                count++;
-                if (count == 2) {
-                    sub(/"prebuilt_"/, "\"prebuilt_duplicate_fixed_\"")
-                }
+                c++
+                if (c == 2) sub(/"prebuilt_"/, "\"prebuilt_duplicate_fixed_\"")
             }
             { print }
         ' "$BP_FILE" > "${BP_FILE}.tmp" && mv "${BP_FILE}.tmp" "$BP_FILE"
@@ -82,7 +79,7 @@ fi
 # ---------------------------------------------------------
 
 if [ -d "kernel/oneplus/sm8150" ]; then
-    echo "🧬 Enabling KernelSU in all arm64 defconfigs..."
+    echo "🧬 Applying KernelSU to arm64 defconfigs..."
     cd kernel/oneplus/sm8150
     find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
         sed -i '/CONFIG_KERNELSU/d' "$defconfig" || true
@@ -92,7 +89,7 @@ if [ -d "kernel/oneplus/sm8150" ]; then
 fi
 
 # ---------------------------------------------------------
-# 6. Remove legacy vendorsetup.sh (if any)
+# 6. Remove legacy vendorsetup
 # ---------------------------------------------------------
 
 rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
@@ -102,52 +99,43 @@ rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
 # 7. Source envsetup
 # ---------------------------------------------------------
 
-echo "📦 Sourcing build/envsetup.sh ..."
-if ! source build/envsetup.sh; then
-    echo "❌ Failed to source build/envsetup.sh"
-    exit 1
-fi
+echo "📦 Sourcing build/envsetup.sh..."
+source build/envsetup.sh
 
 # ---------------------------------------------------------
-# 8. GSI cleanup + Dolby privapp fix
+# 8. Small safe cleanups
 # ---------------------------------------------------------
 
-echo "🧹 Cleaning known problematic entries from GSI Android.bp (Calendar, if present)..."
+echo "🧹 Cleaning GSI Android.bp Calendar line if present..."
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-echo "🧼 Removing duplicate privapp-permissions-dolby.xml references..."
+echo "🧼 Cleaning privapp-permissions-dolby.xml references..."
 for f in \
     "device/oneplus/hotdogb/Android.mk" \
     "device/oneplus/hotdogb/device.mk" \
     "vendor/oneplus/hotdogb/hotdogb-vendor.mk" \
     "vendor/oneplus/sm8150-common/sm8150-common-vendor.mk"
 do
-    if [ -f "$f" ]; then
-        sed -i '/privapp-permissions-dolby.xml/d' "$f" || true
-        echo "Cleaned: $f"
-    fi
+    [ -f "$f" ] && sed -i '/privapp-permissions-dolby.xml/d' "$f" || true
 done
 
 # ---------------------------------------------------------
-# 9. AccessibilityMenu safe restore/cleanup
+# 9. AccessibilityMenu permanent restore only
 # ---------------------------------------------------------
 
-echo "🧩 Restoring AccessibilityMenu Android.bp if needed..."
+echo "🧩 Restoring AccessibilityMenu Android.bp..."
 AM_BP="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp"
 if [ -f "$AM_BP" ]; then
-    if grep -q 'proguard_flags\|proguard_flags_files' "$AM_BP"; then
-        echo "⚠️ Unsupported proguard lines detected; restoring file from git if available..."
-        git checkout -- "$AM_BP" || true
-    fi
-    echo "✅ AccessibilityMenu checked."
+    git checkout -- "$AM_BP" 2>/dev/null || true
+    echo "✅ AccessibilityMenu restored."
 else
-    echo "ℹ️ AccessibilityMenu Android.bp not found, skipping."
+    echo "ℹ️ AccessibilityMenu Android.bp not found."
 fi
 
 # ---------------------------------------------------------
-# 10. Wi-Fi HAL auto-fix logic (minimal, board-aware)
+# 10. Wi-Fi HAL auto-check
 # ---------------------------------------------------------
 
 echo "📡 Running Wi-Fi HAL auto-check..."
@@ -167,98 +155,63 @@ if [ -f "$BOARD_CONFIG" ]; then
     BOARD_WLAN_DEVICE_VALUE=$(grep -E '^[[:space:]]*BOARD_WLAN_DEVICE[[:space:]]*:=' "$BOARD_CONFIG" | awk '{print $3}' || true)
 fi
 
-echo "ℹ️ BOARD_WLAN_DEVICE from BoardConfig: ${BOARD_WLAN_DEVICE_VALUE}"
+echo "ℹ️ BOARD_WLAN_DEVICE: ${BOARD_WLAN_DEVICE_VALUE}"
 
 if [ "$BOARD_WLAN_DEVICE_VALUE" = "qcwcn" ]; then
-    echo "ℹ️ Detected qcwcn (Qualcomm) Wi-Fi device, checking libwifi-hal-qcom..."
-
     if [ -f "$WIFI_BP" ] && grep -q 'libwifi-hal-qcom' "$WIFI_BP"; then
-        echo "✅ libwifi-hal-qcom is referenced in libwifi_hal/Android.bp"
+        echo "✅ libwifi-hal-qcom already referenced."
     else
-        echo "⚠️ libwifi-hal-qcom not referenced in libwifi_hal/Android.bp."
-        echo "   [Auto-fix] Adding libwifi-hal-qcom to vendor impl defaults (if applicable)..."
-
+        echo "⚠️ libwifi-hal-qcom not referenced."
         if [ -f "$WIFI_BP" ]; then
             python3 - << 'EOF'
 import pathlib, re
-
 bp = pathlib.Path("frameworks/opt/net/wifi/libwifi_hal/Android.bp")
 text = bp.read_text()
-
 pattern = r'(cc_defaults\s*\{\s*name:\s*"libwifi_hal_vendor_impl_defaults",[\s\S]*?shared_libs:\s*\[[\s\S]*?\])'
 m = re.search(pattern, text)
-if m:
+if m and 'libwifi-hal-qcom' not in m.group(0):
     block = m.group(0)
-    if 'libwifi-hal-qcom' not in block:
-        new_block = block.replace('shared_libs: [', 'shared_libs: [\n        "libwifi-hal-qcom",')
-        text = text.replace(block, new_block)
-        bp.write_text(text)
-        print("Added libwifi-hal-qcom to libwifi_hal_vendor_impl_defaults shared_libs.")
-    else:
-        print("libwifi-hal-qcom already present in vendor_impl_defaults.")
-else:
-    print("Could not find libwifi_hal_vendor_impl_defaults block; skipping.")
+    new_block = block.replace('shared_libs: [', 'shared_libs: [\n        "libwifi-hal-qcom",')
+    text = text.replace(block, new_block)
+    bp.write_text(text)
+    print("Added libwifi-hal-qcom.")
 EOF
         fi
     fi
-
-    FOUND_MODULE=0
-    for d in "${HARDWARE_WLAN_DIRS[@]}"; do
-        if [ -d "$d" ]; then
-            if grep -Rqs 'name: "libwifi-hal-qcom"' "$d"; then
-                echo "✅ Found libwifi-hal-qcom module definition in $d"
-                FOUND_MODULE=1
-                break
-            fi
-        fi
-    done
-
-    if [ "$FOUND_MODULE" -eq 0 ]; then
-        echo "⚠️ Could NOT find any libwifi-hal-qcom module definition in hardware/qcom(-caf)/wlan dirs."
-        echo "   👉 Build may still fail; please verify your hardware/qcom-caf/wlan repos and branches."
-    fi
-else
-    echo "ℹ️ BOARD_WLAN_DEVICE is not qcwcn; skipping qcom-specific Wi-Fi auto-fix."
 fi
 
 # ---------------------------------------------------------
-# 11. Build commands
+# 11. Build
 # ---------------------------------------------------------
 
 echo "🔑 Generating keys..."
 gk -s || true
 
-echo "🍽️ Lunch: axion hotdogb userdebug va"
+echo "🍽️ Lunching..."
 axion hotdogb userdebug va
 
-echo "🧼 Running installclean..."
+echo "🧼 installclean..."
 make installclean || true
 
-echo "🏗️ Starting AxionOS build..."
+echo "🏗️ Building..."
 ax -br -j"$(nproc)"
 
 echo "=========================================================="
-echo "✅ Auto-build script finished (check above for any errors)."
+echo "✅ Build script finished."
 echo "=========================================================="
 
 # ---------------------------------------------------------
-# 12. Telegram auto-upload
+# 12. Telegram upload
 # ---------------------------------------------------------
 
 TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
 CHAT_ID="@jihad099012"
-
 OUT_DIR="out/target/product/hotdogb"
 ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
-    echo "ROM build successful! Starting automatic Telegram upload..."
-    "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE"
-    if [ $? -eq 0 ]; then
-        echo "✅ Successfully uploaded to Telegram!"
-    else
-        echo "⚠️ Telegram upload failed!"
-    fi
+    echo "📤 Uploading ROM..."
+    "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE" || true
 else
-    echo "⚠️ Error: ROM zip file not found in $OUT_DIR!"
+    echo "⚠️ ROM zip not found in $OUT_DIR"
 fi
