@@ -128,18 +128,28 @@ do
 done
 
 # ---------------------------------------------------------
-# 9. AccessibilityMenu permanent restore only
+# 9. AccessibilityMenu precise line cleanup via Python
 # ---------------------------------------------------------
 
-echo "🧩 Restoring AccessibilityMenu Android.bp..."
+echo "🧼 Sanitizing AccessibilityMenu Android.bp via Python..."
 AM_BP="frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp"
 if [ -f "$AM_BP" ]; then
-    git checkout -- "$AM_BP" 2>/dev/null || true
-    echo "✅ AccessibilityMenu restored."
-else
-    echo "ℹ️ AccessibilityMenu Android.bp not found."
+    python3 - << 'EOF'
+import pathlib
+bp_path = pathlib.Path("frameworks/base/packages/SystemUI/accessibility/accessibilitymenu/Android.bp")
+if bp_path.exists():
+    lines = bp_path.read_text().splitlines()
+    new_lines = []
+    for line in lines:
+        # Remove any line containing faulty proguard properties causing syntax errors
+        if "proguard_flags" in line or "proguard_flags_files" in line:
+            continue
+        new_lines.append(line)
+    bp_path.write_text("\n".join(new_lines) + "\n")
+    print("Successfully cleaned Android.bp via Python.")
+EOF
+    echo "✅ AccessibilityMenu Android.bp cleaned."
 fi
-
 # ---------------------------------------------------------
 # 10. Wi-Fi HAL auto-check
 # ---------------------------------------------------------
