@@ -9,6 +9,19 @@ echo "=========================================================="
 MAIN_DIR="$(pwd)"
 
 # ---------------------------------------------------------
+# 0. Workspace cleanup
+# ---------------------------------------------------------
+
+echo "Cleaning workspace for hotdogb..."
+rm -rf device/oneplus/hotdogb
+rm -rf device/oneplus/sm8150-common
+rm -rf vendor/oneplus/hotdogb
+rm -rf vendor/oneplus/sm8150-common
+rm -rf kernel/oneplus/sm8150
+rm -rf hardware/dolby
+rm -rf out/target/product/hotdogb
+
+# ---------------------------------------------------------
 # 1. Environment basics
 # ---------------------------------------------------------
 
