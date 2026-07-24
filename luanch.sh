@@ -181,7 +181,7 @@ echo "🔑 Generating keys..."
 gk -s || true
 
 echo "🍽️ Lunching..."
-axion hotdogb userdebug va
+axion hotdogb userdebug GMS
 
 echo "🧼 installclean..."
 make installclean || true
