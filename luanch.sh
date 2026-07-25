@@ -128,7 +128,7 @@ do
 done
 
 # ---------------------------------------------------------
-# 10. Wi-Fi HAL auto-check
+# 9. Wi-Fi HAL auto-check
 # ---------------------------------------------------------
 
 echo "📡 Running Wi-Fi HAL auto-check..."
@@ -174,27 +174,24 @@ EOF
 fi
 
 # ---------------------------------------------------------
-# 11. Build
+# 10. Build
 # ---------------------------------------------------------
 
-echo "🔑 Generating keys..."
-gk -s || true
-
 echo "🍽️ Lunching..."
-axion hotdogb userdebug GMS
+lunch axion_hotdogb-userdebug
 
 echo "🧼 installclean..."
 make installclean || true
 
 echo "🏗️ Building..."
-ax -br -j"$(nproc)"
+m -j"$(nproc)"
 
 echo "=========================================================="
 echo "✅ Build script finished."
 echo "=========================================================="
 
 # ---------------------------------------------------------
-# 12. Telegram upload
+# 11. Telegram upload
 # ---------------------------------------------------------
 
 TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
