@@ -177,15 +177,14 @@ fi
 # 10. Build
 # ---------------------------------------------------------
 
-echo "🍽️ Lunching..."
-lunch axion_hotdogb-userdebug
+echo "🍽️ Configuring with axion helper..."
+axion hotdogb userdebug gms
 
 echo "🧼 installclean..."
 make installclean || true
 
 echo "🏗️ Building..."
 m -j"$(nproc)"
-
 echo "=========================================================="
 echo "✅ Build script finished."
 echo "=========================================================="
