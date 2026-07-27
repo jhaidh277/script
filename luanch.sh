@@ -3,7 +3,7 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 AxionOS hotdogb Auto-Build (NO-RISK)"
+echo "🚀 AxionOS hotdogb Auto-Build (GMS)"
 echo "=========================================================="
 
 MAIN_DIR="$(pwd)"
@@ -135,13 +135,6 @@ echo "📡 Running Wi-Fi HAL auto-check..."
 
 BOARD_CONFIG="device/oneplus/sm8150-common/BoardConfigCommon.mk"
 WIFI_BP="frameworks/opt/net/wifi/libwifi_hal/Android.bp"
-HARDWARE_WLAN_DIRS=(
-    "hardware/qcom-caf/wlan"
-    "hardware/qcom/wlan"
-    "hardware/qcom/wlan/legacy"
-    "hardware/qcom/wlan/wcn6740"
-    "hardware/qcom/wlan/wcn7760"
-)
 
 BOARD_WLAN_DEVICE_VALUE=""
 if [ -f "$BOARD_CONFIG" ]; then
@@ -155,26 +148,22 @@ if [ "$BOARD_WLAN_DEVICE_VALUE" = "qcwcn" ]; then
         echo "✅ libwifi-hal-qcom already referenced."
     else
         echo "⚠️ libwifi-hal-qcom not referenced."
-        if [ -f "$WIFI_BP" ]; then
-            python3 - << 'EOF'
-import pathlib, re
-bp = pathlib.Path("frameworks/opt/net/wifi/libwifi_hal/Android.bp")
-text = bp.read_text()
-pattern = r'(cc_defaults\s*\{\s*name:\s*"libwifi_hal_vendor_impl_defaults",[\s\S]*?shared_libs:\s*\[[\s\S]*?\])'
-m = re.search(pattern, text)
-if m and 'libwifi-hal-qcom' not in m.group(0):
-    block = m.group(0)
-    new_block = block.replace('shared_libs: [', 'shared_libs: [\n        "libwifi-hal-qcom",')
-    text = text.replace(block, new_block)
-    bp.write_text(text)
-    print("Added libwifi-hal-qcom.")
-EOF
-        fi
     fi
 fi
 
 # ---------------------------------------------------------
-# 10. Build
+# 10. Key generation fix
+# ---------------------------------------------------------
+
+echo "🔑 Preparing key directory..."
+mkdir -p "$HOME/.android-certs"
+export ANDROID_CERTS="$HOME/.android-certs"
+
+echo "🔑 Generating keys..."
+gk -s || true
+
+# ---------------------------------------------------------
+# 11. Build
 # ---------------------------------------------------------
 
 echo "🍽️ Configuring with axion helper..."
@@ -185,12 +174,13 @@ make installclean || true
 
 echo "🏗️ Building..."
 m -j"$(nproc)"
+
 echo "=========================================================="
 echo "✅ Build script finished."
 echo "=========================================================="
 
 # ---------------------------------------------------------
-# 11. Telegram upload
+# 12. Telegram upload
 # ---------------------------------------------------------
 
 TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
@@ -200,7 +190,7 @@ ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
 
 if [ -f "$ZIP_FILE" ]; then
     echo "📤 Uploading ROM..."
-    "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T! 🎉" "$ZIP_FILE" || true
+    "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T GMS! 🎉" "$ZIP_FILE" || true
 else
     echo "⚠️ ROM zip not found in $OUT_DIR"
 fi
