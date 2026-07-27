@@ -7,6 +7,7 @@ echo "🚀 AxionOS hotdogb Auto-Build (GMS)"
 echo "=========================================================="
 
 MAIN_DIR="$(pwd)"
+KEY_DIR="$HOME/.android-certs"
 
 echo "Cleaning workspace for hotdogb..."
 rm -rf device/oneplus/hotdogb
@@ -152,15 +153,21 @@ if [ "$BOARD_WLAN_DEVICE_VALUE" = "qcwcn" ]; then
 fi
 
 # ---------------------------------------------------------
-# 10. Key generation fix
+# 10. Key generation
 # ---------------------------------------------------------
 
 echo "🔑 Preparing key directory..."
-mkdir -p "$HOME/.android-certs"
-export ANDROID_CERTS="$HOME/.android-certs"
+mkdir -p "$KEY_DIR"
+export ANDROID_CERTS="$KEY_DIR"
 
 echo "🔑 Generating keys..."
-gk -s || true
+subject='/C=US/ST=California/L=Los Angeles/O=AxionOS/OU=AxionOS/CN=AxionOS'
+
+for x in releasekey platform shared media networkstack testkey bluetooth sdk_sandbox verifiedboot; do
+    if [ ! -f "$KEY_DIR/$x.pk8" ] || [ ! -f "$KEY_DIR/$x.x509.pem" ]; then
+        ./development/tools/make_key "$KEY_DIR/$x" "$subject"
+    fi
+done
 
 # ---------------------------------------------------------
 # 11. Build
