@@ -23,7 +23,7 @@ fi
  
 source build/envsetup.sh
  
-axion xpeng userdebug gms
+axion hotdogb userdebug gms
  \ 
 
 ax -b
