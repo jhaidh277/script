@@ -1,7 +1,4 @@
 #!/bin/bash
-set -euo pipefail
-
-cd "$(dirname "$0")"
 
 echo "=========================================================="
 echo "🚀 AxionOS hotdogb Auto-Build (GMS)"
