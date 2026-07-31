@@ -46,7 +46,10 @@ if [ -d "kernel/oneplus/sm8150" ]; then
 fi
 
 echo "📦 Sourcing build/envsetup.sh..."
+export TOP="$MAIN_DIR"
+set +u
 source ./build/envsetup.sh
+set -u
 
 type axion >/dev/null 2>&1 || {
     echo "ERROR: axion command not available after sourcing envsetup.sh"
