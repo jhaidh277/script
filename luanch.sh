@@ -1,18 +1,23 @@
 #!/bin/bash
 set -e
 cd "$(dirname "$0")"
+
 echo "=========================================================="
 echo "🚀 AxionOS hotdogb Auto-Build (GMS)"
 echo "=========================================================="
+
 if [ ! -f "./build/envsetup.sh" ]; then
     echo "ERROR: build/envsetup.sh not found."
     echo "Run this from the Android source root."
     exit 1
 fi
+
 MAIN_DIR="$PWD"
-echo "Cleaning workspace for hotdogb..."
+
+echo "🧹 Cleaning workspace for hotdogb..."
 rm -rf .repo/local_manifests
 rm -rf out/target/product/hotdogb
+
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
@@ -50,24 +55,37 @@ if [ -d "kernel/oneplus/sm8150" ]; then
     cd "$MAIN_DIR"
 fi
 
-# AOSP স্ক্রিপ্টগুলোর জন্য unbound variable চেকিং বন্ধ করা হলো
+# ------------------------------------------------------------
+# AOSP/axion স্ক্রিপ্টগুলোতে অনেক ভেরিয়েবল আনডিক্লেয়ারড থাকে,
+# তাই envsetup.sh সোর্স করা থেকে শুরু করে পুরো বিল্ড শেষ
+# না হওয়া পর্যন্ত 'set -u' বন্ধ রাখা হলো।
+# ------------------------------------------------------------
 set +u
+
 echo "📦 Sourcing build/envsetup.sh..."
+export TOP="$MAIN_DIR"
 source ./build/envsetup.sh
+
 type axion >/dev/null 2>&1 || {
     echo "ERROR: axion command not available after sourcing envsetup.sh"
     exit 1
 }
 
-echo "🔑 Generate Private Keys..."
+echo "🔑 Generating private keys..."
 mkdir -p vendor/lineage-priv/keys
 gk -s
 
-echo "🍽️ Configuring with axion helper..."
+echo "🍽️ Configuring with axion helper (hotdogb, userdebug, gms)..."
 axion hotdogb userdebug gms
+
+echo "🧹 Running installclean..."
+make installclean || true
 
 echo "🏗️ Building the ROM..."
 ax -br -j"$(nproc)"
+
+set -u
+# ------------------------------------------------------------
 
 echo "=========================================================="
 echo "✅ Build script finished."
@@ -77,7 +95,8 @@ echo "=========================================================="
 TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
 CHAT_ID="@jihad099012"
 OUT_DIR="out/target/product/hotdogb"
-ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1 || true)
+ZIP_FILE=$(ls -t "${OUT_DIR}"/*.zip 2>/dev/null | head -n 1 || true)
+
 if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
     echo "📤 Uploading ROM..."
     "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T GMS! 🎉" "$ZIP_FILE" || true
