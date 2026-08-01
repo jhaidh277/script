@@ -56,9 +56,9 @@ if [ -d "kernel/oneplus/sm8150" ]; then
 fi
 
 # ------------------------------------------------------------
-# AOSP/axion স্ক্রিপ্টগুলোতে অনেক ভেরিয়েবল আনডিক্লেয়ারড থাকে,
-# তাই envsetup.sh সোর্স করা থেকে শুরু করে পুরো বিল্ড শেষ
-# না হওয়া পর্যন্ত 'set -u' বন্ধ রাখা হলো।
+# envsetup.sh, axion, ax — এই ফাংশনগুলোর ভিতরে অনেক ভেরিয়েবল
+# আনডিক্লেয়ারড থাকে, তাই পুরো বিল্ড প্রসেস শেষ না হওয়া
+# পর্যন্ত 'set -u' বন্ধ রাখা হলো (ইন্টারেক্টিভ শেলের মতো আচরণ)।
 # ------------------------------------------------------------
 set +u
 
@@ -75,6 +75,9 @@ echo "🔑 Generating private keys..."
 mkdir -p vendor/lineage-priv/keys
 gk -s
 
+echo "💾 Setting up swap (avoids OOM during build)..."
+setupSwap || true
+
 echo "🍽️ Configuring with axion helper (hotdogb, userdebug, gms)..."
 axion hotdogb userdebug gms
 
@@ -82,7 +85,7 @@ echo "🧹 Running installclean..."
 make installclean || true
 
 echo "🏗️ Building the ROM..."
-ax -br -j"$(nproc)"
+ax -br -j18
 
 set -u
 # ------------------------------------------------------------
