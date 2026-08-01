@@ -1,20 +1,18 @@
 #!/bin/bash
-
+set -e
+cd "$(dirname "$0")"
 echo "=========================================================="
 echo "🚀 AxionOS hotdogb Auto-Build (GMS)"
 echo "=========================================================="
-
 if [ ! -f "./build/envsetup.sh" ]; then
     echo "ERROR: build/envsetup.sh not found."
     echo "Run this from the Android source root."
     exit 1
 fi
-
 MAIN_DIR="$PWD"
-
 echo "Cleaning workspace for hotdogb..."
 rm -rf .repo/local_manifests
-
+rm -rf out/target/product/hotdogb
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
@@ -25,10 +23,17 @@ export TARGET_MULTISIM_CONFIG=dsds
 export TARGET_INCLUDES_LOS_PREBUILTS=false
 
 echo "📥 Initializing repo..."
-repo init --depth=1 -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs
+repo init --depth=1 -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs || {
+    echo "ERROR: repo init failed."
+    exit 1
+}
 
 echo "📥 Cloning local manifest..."
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b axion .repo/local_manifests
+rm -rf .repo/local_manifests
+git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b axion .repo/local_manifests || {
+    echo "ERROR: local manifest clone failed."
+    exit 1
+}
 
 if [ -x /opt/crave/resync.sh ]; then
     echo "🔄 Running Crave resync..."
@@ -45,18 +50,17 @@ if [ -d "kernel/oneplus/sm8150" ]; then
     cd "$MAIN_DIR"
 fi
 
-echo "📦 Sourcing build/envsetup.sh..."
-export TOP="$MAIN_DIR"
+# AOSP স্ক্রিপ্টগুলোর জন্য unbound variable চেকিং বন্ধ করা হলো
 set +u
+echo "📦 Sourcing build/envsetup.sh..."
 source ./build/envsetup.sh
-set -u
-
 type axion >/dev/null 2>&1 || {
     echo "ERROR: axion command not available after sourcing envsetup.sh"
     exit 1
 }
 
 echo "🔑 Generate Private Keys..."
+mkdir -p vendor/lineage-priv/keys
 gk -s
 
 echo "🍽️ Configuring with axion helper..."
@@ -69,12 +73,12 @@ echo "=========================================================="
 echo "✅ Build script finished."
 echo "=========================================================="
 
+# টেলিগ্রাম আপলোড সেকশন
 TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
 CHAT_ID="@jihad099012"
 OUT_DIR="out/target/product/hotdogb"
-ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
-
-if [ -f "$ZIP_FILE" ]; then
+ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1 || true)
+if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
     echo "📤 Uploading ROM..."
     "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T GMS! 🎉" "$ZIP_FILE" || true
 else
