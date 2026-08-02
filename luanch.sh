@@ -58,21 +58,6 @@ EOF
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# 🎯 [FIX] OPlus Camera MDM header missing fix (CameraService.cpp error bypass)
-if [ ! -d "hardware/oplus/cameraMDM" ] && [ -d "hardware/oplus" ]; then
-    echo "🛠️ Creating missing cameraMDM directory structure and dummy/fallback headers..."
-    mkdir -p hardware/oplus/hardware/cameraMDM/2.0 || true
-    # একটি ডামি বা বেসিক হেডার ফাইল তৈরি করা যাতে কম্পাইলেশন আটকে না যায়
-    cat << 'EOF' > hardware/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.h
-#ifndef VENDOR_OPLUS_HARDWARE_CAMERAMDM_V2_0_IOPLUSCAMERAMDM_H
-#define VENDOR_OPLUS_HARDWARE_CAMERAMDM_V2_0_IOPLUSCAMERAMDM_H
-#pragma once
-namespace vendor { namespace oplus { namespace hardware { namespace cameraMDM { namespace V2_0 {
-// Fallback interface definition to resolve build dependency
-}}}}}}
-#endif
-EOF
-fi
 
 # 🎯 [FIX] hardware/lineage/compat/Android.bp এর ডুপ্লিকেট মডিউল ১০০% রিমুভ করার জন্য sed কমান্ড
 if [ -f "hardware/lineage/compat/Android.bp" ]; then
