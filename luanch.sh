@@ -28,51 +28,34 @@ mkdir -p .repo/repo/hooks || true
 mkdir -p .repo/local_manifests || true
 
 # ৫. Local manifest create/copy
-cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
   <!-- Device Tree -->
-  <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
+  <project name="jhaidh26/device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="16" />
   
   <!-- Common Tree -->
-  <project name="jhaidh277/device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
+  <project name="jhaidh26/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
   
   <!-- Kernel -->
-  <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
+  <project name="jhaidh26/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
 
   <!-- Hardware Dolby Lunaris -->
-  <project name="jhaidh277/hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
+  <project name="jhaidh26/hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
 
   <!-- Vendor blobs for hotdogb -->
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
 
   <!-- Common vendor blobs -->
-  <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
+  <project path="vendor/oneplus/sm8150-common" name="jhaidh26/vendor_oneplus_sm8150-common" remote="github" revision="16" />
   
   <!-- OnePlus hardware -->
-  <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
+  <project path="hardware/oplus" name="jhaidh26/android_hardware_oplus" remote="github" revision="16" />
 </manifest>
-EOF
 
 # ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# 🎯 [FIX] OPlus Camera MDM header missing fix (CameraService.cpp error bypass)
-if [ ! -d "hardware/oplus/cameraMDM" ] && [ -d "hardware/oplus" ]; then
-    echo "🛠️ Creating missing cameraMDM directory structure and dummy/fallback headers..."
-    mkdir -p hardware/oplus/hardware/cameraMDM/2.0 || true
-    # একটি ডামি বা বেসিক হেডার ফাইল তৈরি করা যাতে কম্পাইলেশন আটকে না যায়
-    cat << 'EOF' > hardware/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.h
-#ifndef VENDOR_OPLUS_HARDWARE_CAMERAMDM_V2_0_IOPLUSCAMERAMDM_H
-#define VENDOR_OPLUS_HARDWARE_CAMERAMDM_V2_0_IOPLUSCAMERAMDM_H
-#pragma once
-namespace vendor { namespace oplus { namespace hardware { namespace cameraMDM { namespace V2_0 {
-// Fallback interface definition to resolve build dependency
-}}}}}}
-#endif
-EOF
-fi
 
 # 🎯 [FIX] hardware/lineage/compat/Android.bp এর ডুপ্লিকেট মডিউল ১০০% রিমুভ করার জন্য sed কমান্ড
 if [ -f "hardware/lineage/compat/Android.bp" ]; then
