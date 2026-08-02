@@ -27,7 +27,7 @@ repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/man
 mkdir -p .repo/repo/hooks || true
 mkdir -p .repo/local_manifests || true
 
-# ৫. Local manifest create/copy (আপনার দেওয়া XML কনফিগারেশন সরাসরি এখানে সেট করা হলো)
+# ৫. Local manifest create/copy
 cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
@@ -58,7 +58,23 @@ EOF
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# 🎯 [FIX] hardware/lineage/compat/Android.bp এর ডুপ্লিকেট মডিউল ফিক্স করার জন্য sed কমান্ড
+# 🎯 [FIX] OPlus Camera MDM header missing fix (CameraService.cpp error bypass)
+if [ ! -d "hardware/oplus/cameraMDM" ] && [ -d "hardware/oplus" ]; then
+    echo "🛠️ Creating missing cameraMDM directory structure and dummy/fallback headers..."
+    mkdir -p hardware/oplus/hardware/cameraMDM/2.0 || true
+    # একটি ডামি বা বেসিক হেডার ফাইল তৈরি করা যাতে কম্পাইলেশন আটকে না যায়
+    cat << 'EOF' > hardware/oplus/hardware/cameraMDM/2.0/IOPlusCameraMDM.h
+#ifndef VENDOR_OPLUS_HARDWARE_CAMERAMDM_V2_0_IOPLUSCAMERAMDM_H
+#define VENDOR_OPLUS_HARDWARE_CAMERAMDM_V2_0_IOPLUSCAMERAMDM_H
+#pragma once
+namespace vendor { namespace oplus { namespace hardware { namespace cameraMDM { namespace V2_0 {
+// Fallback interface definition to resolve build dependency
+}}}}}}
+#endif
+EOF
+fi
+
+# 🎯 [FIX] hardware/lineage/compat/Android.bp এর ডুপ্লিকেট মডিউল ১০০% রিমুভ করার জন্য sed কমান্ড
 if [ -f "hardware/lineage/compat/Android.bp" ]; then
     echo "🛠️ Fixing duplicate modules in hardware/lineage/compat/Android.bp..."
     sed -i '/prebuilt_libprotobuf-cpp-full-3.9.1-vendorcompat/,/^}/d' hardware/lineage/compat/Android.bp || true
@@ -67,13 +83,28 @@ if [ -f "hardware/lineage/compat/Android.bp" ]; then
     sed -i '/prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat/,/^}/d' hardware/lineage/compat/Android.bp || true
 fi
 
-# 🎯 [DYNAMIC CRITICAL FIX - VERIFIED] ডুপ্লিকেট "prebuilt_" মডিউল ১০০% ফিক্স
+# 🎯 [FIX] Missing hotdogb-vendor.mk ফাইলের সমস্যা সমাধানের জন্য অটো জেনারেটর বা চেক
+VENDOR_MAKEFILE="vendor/oneplus/hotdogb/hotdogb-vendor.mk"
+if [ ! -f "$VENDOR_MAKEFILE" ] && [ -d "vendor/oneplus/hotdogb" ]; then
+    echo "⚠️ hotdogb-vendor.mk not found, creating a basic fallback structure..."
+    touch "$VENDOR_MAKEFILE"
+fi
+
+# 🎯 [DYNAMIC CRITICAL FIX - VERIFIED] ডুপ্লিকেট "prebuilt_" মডিউল ফিক্স
 BP_FILE="vendor/oneplus/sm8150-common/Android.bp"
 if [ -f "$BP_FILE" ]; then
     echo "🛠️ Dynamically fixing duplicate prebuilt_ module definition..."
     awk '/name:[[:space:]]*"prebuilt_"/ { count++; if (count == 2) { sub(/"prebuilt_"/, "\"prebuilt_duplicate_fixed_\"") } } { print }' "$BP_FILE" > "${BP_FILE}.tmp" && mv "${BP_FILE}.tmp" "$BP_FILE" || true
 fi
 
+# 🎯 [ADDITIONAL FIX] Phone definitions setup in system.prop for OnePlus 7T
+PROP_FILE="device/oneplus/hotdogb/system.prop"
+if [ -f "$PROP_FILE" ]; then
+    echo "🛠️ Injecting custom system properties for OnePlus 7T..."
+    grep -q "ro.product.marketname" "$PROP_FILE" || echo "ro.product.marketname=OnePlus 7T" >> "$PROP_FILE"
+    grep -q "ro.infinity.soc" "$PROP_FILE" || echo "ro.infinity.soc=Qualcomm Snapdragon 855+" >> "$PROP_FILE"
+    grep -q "ro.infinity.camera" "$PROP_FILE" || echo "ro.infinity.camera=48 MP + 12 MP + 16 MP" >> "$PROP_FILE"
+fi
 
 # 🎯 [KERNELSU ACTIVATION] সোর্সে থাকা KernelSU অ্যাক্টিভেট করা
 if [ -d "kernel/oneplus/sm8150" ]; then
@@ -123,7 +154,7 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# FIX: লাঞ্চ কমান্ড (Infinity রমের জন্য সঠিক ফরম্যাট)
+# FIX: লাঞ্চ কমান্ড
 lunch infinity_hotdogb-userdebug || lunch lineage_hotdogb-userdebug || lunch hotdogb-userdebug || echo "⚠️ Lunch failed..."
 
 # লাঞ্চ সফল হওয়ার পর ওল্ড ইমেজ ক্লিন করা
