@@ -21,7 +21,7 @@ rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
 # ৩. Repo initialization for Project Infinity-X (Android 16 / cnb branch based on your manifest)
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b cnb -g default,-mips,-darwin,-notdefault --depth 1 || true
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
 
 # ৪. Directory structure নিশ্চিত করা
 mkdir -p .repo/repo/hooks || true
