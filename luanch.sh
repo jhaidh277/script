@@ -35,8 +35,8 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
   
   <!-- Common Tree -->
-  <project name="jhaidh277/device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
-  
+  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
+
   <!-- Kernel -->
   <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
 
