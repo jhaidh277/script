@@ -30,7 +30,7 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
   <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
   <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
-  <project name="jhaidh277/hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
+  <project name="hardware/dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
   <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
   <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
@@ -65,16 +65,22 @@ if [ -f "$BP2" ]; then
 fi
 
 # ------------------------------------------------------------
-# 🩹 FIX 3: GSI-তে libcameraservice_extension.opsm8150 dependency
-# aosp_shared_system_image (GSI) কোনো device-specific মডিউলের
-# উপর নির্ভর করতে পারে না — frameworks/av থেকে এই dependency
-# সরিয়ে দেওয়া হলো
+# 🩹 FIX 3: GSI-তে libcameraservice_extension.opsm8150 dependency রিমুভ
 # ------------------------------------------------------------
 AV_BP="frameworks/av/services/camera/libcameraservice/Android.bp"
 if [ -f "$AV_BP" ]; then
     echo "🩹 Removing GSI-incompatible camera extension dependency..."
     sed -i '/"libcameraservice_extension.opsm8150"/d' "$AV_BP" || true
+    sed -i '/libcameraservice_extension.opsm8150/d' "$AV_BP" || true
 fi
+
+COMMON_BP_FILES=$(find device/oneplus/sm8150-common -name "Android.bp" -o -name "*.mk")
+for bp in $COMMON_BP_FILES; do
+    if grep -q "libcameraservice_extension.opsm8150" "$bp"; then
+        echo "🩹 Removing reference from $bp..."
+        sed -i '/libcameraservice_extension.opsm8150/d' "$bp" || true
+    fi
+done
 
 # ------------------------------------------------------------
 # 🩹 FIX 4: Missing hotdogb-vendor.mk (সতর্কতা সহ)
@@ -82,7 +88,6 @@ fi
 VENDOR_MAKEFILE="vendor/oneplus/hotdogb/hotdogb-vendor.mk"
 if [ ! -f "$VENDOR_MAKEFILE" ] && [ -d "vendor/oneplus/hotdogb" ]; then
     echo "⚠️ WARNING: hotdogb-vendor.mk missing. Creating empty fallback."
-    echo "⚠️ This may cause missing-vendor-blob errors later — check vendor tree source."
     touch "$VENDOR_MAKEFILE"
 fi
 
@@ -130,9 +135,6 @@ export FORCE_BUILD_NOTICES=false
 export SKIP_NOTICE_BUILD=true
 export OVERRIDE_NOTICE_FIELDS=true
 
-# ------------------------------------------------------------
-# envsetup/gk/lunch এর ভিতরের unbound variable এরর এড়াতে
-# ------------------------------------------------------------
 set +u
 export TOP="$MAIN_DIR"
 
@@ -144,9 +146,6 @@ type lunch >/dev/null 2>&1 || {
     exit 1
 }
 
-echo "🔑 Generating private keys..."
-mkdir -p vendor/lineage-priv/keys
-gk -s || true
 
 echo "💾 Setting up swap..."
 setupSwap || true
@@ -166,6 +165,7 @@ else
     echo "ERROR: All lunch targets failed. Aborting."
     exit 1
 fi
+
 
 echo "🧹 Running installclean..."
 make installclean || true
