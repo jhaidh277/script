@@ -1,39 +1,34 @@
-rm -rf .repo/local_manifests
-rm -rf out/target/product/hotdogb
-rm -rf device/oneplus/hotdogb
-rm -rf device/oneplus/sm8150-common
-rm -rf vendor/oneplus/hotdogb
-rm -rf vendor/oneplus/sm8150-common
-rm -rf kernel/oneplus/sm8150
-rm -rf hardware/dolby
+#!/bin/bash
 
-# ---------------------------------------------------------
-# 1. Environment basics
-# ---------------------------------------------------------
+set -e
+
+echo "=========================================================="
+echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
+echo "=========================================================="
+
+MAIN_DIR=$(pwd)
 
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
-export WITH_ADB_INSECURE=true
-export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=false
-export TARGET_MULTISIM_CONFIG=dsds
 
-repo init --depth=1 -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs
+echo "🧹 Force cleaning corrupted directories..."
+rm -rf .repo/local_manifests || true
 
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b axion .repo/local_manifests
 
-if [ -x /opt/crave/resync.sh ]; then
-    echo "🔄 Running Crave resync..."
-    /opt/crave/resync.sh
-fi
+echo "📥 Initializing repo for Project Infinity-X..."
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
+  
+echo "📥 Cloning local manifest from GitHub..."
+git clone https://github.com/jhaidh277/hotdogb_local_manifest -b infinity .repo/local_manifests || true
+  
+echo "🔄 Syncing sources via Crave resync..."
+/opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# ---------------------------------------------------------
-# 2. Optional KernelSU enable
-# ---------------------------------------------------------
 
+# KernelSU
 if [ -d "kernel/oneplus/sm8150" ]; then
-    echo "🧬 Applying KernelSU to arm64 defconfigs..."
+    echo "🧬 Applying KernelSU..."
     cd kernel/oneplus/sm8150
     find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
         sed -i '/CONFIG_KERNELSU/d' "$defconfig" || true
@@ -42,37 +37,24 @@ if [ -d "kernel/oneplus/sm8150" ]; then
     cd "$MAIN_DIR"
 fi
 
-# ---------------------------------------------------------
-# 3. Source envsetup
-# ---------------------------------------------------------
+
+echo "📦 Sourcing build/envsetup.sh..."
+source build/envsetup.sh
 
 
-AXION_KERNEL_MODULES_BINDER_UX_HOOKS=y
-
-AXION_KERNEL_MODULES_BINDER_OBS_HOOKS=y
-
-. build/envsetup.sh
-
-axion hotdogb userdebug gms
-
-ax -br -j4 
-
-echo "=========================================================="
-echo "✅ Build script finished."
-echo "=========================================================="
-
-# ---------------------------------------------------------
-# 4. Telegram upload
-# ---------------------------------------------------------
-
-TELEGRAM_BIN="/home/admin/.local/bin/telegram-upload"
-CHAT_ID="@jihad099012"
-OUT_DIR="out/target/product/hotdogb"
-ZIP_FILE=$(ls -t ${OUT_DIR}/*.zip 2>/dev/null | head -n 1)
-
-if [ -f "$ZIP_FILE" ]; then
-    echo "📤 Uploading ROM..."
-    "$TELEGRAM_BIN" --to "$CHAT_ID" --caption "ROM Build Successful for OnePlus 7T GMS! 🎉" "$ZIP_FILE" || true
-else
-    echo "⚠️ ROM zip not found in $OUT_DIR"
+if [ -f build/make/target/product/gsi/Android.bp ]; then
+    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
+
+echo "🍽️ Lunching Project Infinity-X target..."
+lunch infinity_hotdogb-userdebug || true
+
+echo "🧹 Running installclean..."
+make installclean || true
+
+echo "🏗️ Building Project Infinity-X ROM (m bacon)..."
+m bacon 
+
+echo "=========================================================="
+echo "✅ Project Infinity-X Build script finished successfully."
+echo "=========================================================="
