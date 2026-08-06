@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting Build Script for OnePlus 7T (hotdogb)"
+echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
@@ -14,7 +14,7 @@ echo "🧹 Force cleaning corrupted directories..."
 rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
-echo "📥 Initializing repo..."
+echo "📥 Initializing repo for Project Infinity-X..."
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || {
     echo "ERROR: repo init failed."
     exit 1
@@ -83,7 +83,17 @@ for bp in $COMMON_BP_FILES; do
 done
 
 # ------------------------------------------------------------
-# 🩹 FIX 4: Missing hotdogb-vendor.mk (সতর্কতা সহ)
+# 🩹 FIX 4: Missing IOPlusCameraMDM.h in CameraService.cpp
+# ------------------------------------------------------------
+CAMERA_SERVICE="frameworks/av/services/camera/libcameraservice/CameraService.cpp"
+if [ -f "$CAMERA_SERVICE" ]; then
+    echo "🩹 Patching CameraService.cpp to bypass missing IOPlusCameraMDM.h..."
+    sed -i '/#include <vendor\/oplus\/hardware\/cameraMDM\/2.0\/IOPlusCameraMDM.h>/d' "$CAMERA_SERVICE" || true
+    sed -i '/OPlusCameraMDM/d' "$CAMERA_SERVICE" || true
+fi
+
+# ------------------------------------------------------------
+# 🩹 FIX 5: Missing hotdogb-vendor.mk (সতর্কতা সহ)
 # ------------------------------------------------------------
 VENDOR_MAKEFILE="vendor/oneplus/hotdogb/hotdogb-vendor.mk"
 if [ ! -f "$VENDOR_MAKEFILE" ] && [ -d "vendor/oneplus/hotdogb" ]; then
@@ -146,7 +156,6 @@ type lunch >/dev/null 2>&1 || {
     exit 1
 }
 
-
 echo "💾 Setting up swap..."
 setupSwap || true
 
@@ -154,7 +163,7 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-echo "🍽️ Lunching target..."
+echo "🍽️ Lunching Project Infinity-X target..."
 if lunch infinity_hotdogb-userdebug; then
     echo "✅ Lunched infinity_hotdogb-userdebug"
 elif lunch lineage_hotdogb-userdebug; then
@@ -170,10 +179,10 @@ fi
 echo "🧹 Running installclean..."
 make installclean || true
 
-echo "🏗️ Building the ROM (m bacon)..."
+echo "🏗️ Building Project Infinity-X ROM (m bacon)..."
 m bacon -j16
 
 set -u
 echo "=========================================================="
-echo "✅ Build script finished."
+echo "✅ Project Infinity-X Build script finished successfully."
 echo "=========================================================="
