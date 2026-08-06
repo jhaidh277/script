@@ -8,8 +8,6 @@ echo "=========================================================="
 
 MAIN_DIR=$(pwd)
 
-sudo apt update
-sudo apt upgrade
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
