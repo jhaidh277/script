@@ -8,13 +8,14 @@ echo "=========================================================="
 
 MAIN_DIR=$(pwd)
 
+sudo apt update
+sudo apt upgrade
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
 echo "🧹 Force cleaning corrupted directories..."
 rm -rf .repo/local_manifests || true
-
 
 echo "📥 Initializing repo for Project Infinity-X..."
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
@@ -25,6 +26,17 @@ git clone https://github.com/jhaidh277/hotdogb_local_manifest -b infinity .repo/
 echo "🔄 Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
+# ------------------------------------------------------------
+# 🩹 FIX: Remove duplicate protobuf modules in hardware/lineage/compat/Android.bp
+# ------------------------------------------------------------
+BP1="hardware/lineage/compat/Android.bp"
+if [ -f "$BP1" ]; then
+    echo "🩹 Fixing duplicate protobuf modules in $BP1..."
+    sed -i '/prebuilt_libprotobuf-cpp-full-3.9.1-vendorcompat/,/^}/d' "$BP1" || true
+    sed -i '/prebuilt_libprotobuf-cpp-lite-3.9.1-vendorcompat/,/^}/d' "$BP1" || true
+    sed -i '/prebuilt_libprotobuf-cpp-full-21.12-vendorcompat/,/^}/d' "$BP1" || true
+    sed -i '/prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat/,/^}/d' "$BP1" || true
+fi
 
 # KernelSU
 if [ -d "kernel/oneplus/sm8150" ]; then
@@ -37,10 +49,8 @@ if [ -d "kernel/oneplus/sm8150" ]; then
     cd "$MAIN_DIR"
 fi
 
-
 echo "📦 Sourcing build/envsetup.sh..."
 source build/envsetup.sh
-
 
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
