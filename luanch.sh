@@ -1,8 +1,4 @@
-crave run --clean --no-patch -- echo "=========================================================="
-echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
-echo "=========================================================="
-
-echo "🧹 Cleaning local manifests..."
+crave run --clean --no-patch -- echo "🧹 Cleaning local manifests..."
 rm -rf .repo/local_manifests
 
 echo "📥 Initializing repo..."
