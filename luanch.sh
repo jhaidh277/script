@@ -10,7 +10,6 @@ sed -i '/visibility: \[/,/\],/d' device/oneplus/sm8150-common/camera_helper/Andr
 touch device/oneplus/sm8150-common/camera_helper/CameraProviderExtension.cpp; \
 sed -i '/libcameraservice_extension.opsm8150/d' frameworks/av/services/camera/libcameraservice/Android.bp; \
 find kernel/oneplus/sm8150/arch/arm64/configs -type f -name '*defconfig' -exec sed -i '/CONFIG_KERNELSU/d' {} \; -exec sh -c 'echo CONFIG_KERNELSU=y >> {}' \; ; \
-mkdir -p vendor/lineage-priv/keys; \
 source build/envsetup.sh; \
 sed -i '/Calendar/d' build/make/target/product/gsi/Android.bp; \
 lunch infinity_hotdogb-userdebug && make installclean && m bacon -j\$(nproc --all)"
