@@ -1,5 +1,3 @@
-#!/bin/bash
-
 echo "=========================================================="
 echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
 echo "=========================================================="
@@ -15,15 +13,10 @@ rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
 echo "📥 Initializing repo for Project Infinity-X..."
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || {
-    echo "ERROR: repo init failed."
-    exit 1
-}
-
-mkdir -p .repo/repo/hooks || true
-mkdir -p .repo/local_manifests || true
+repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
 
 echo "📥 Creating local manifest..."
+mkdir -p .repo/local_manifests
 cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
@@ -74,7 +67,7 @@ if [ -f "$AV_BP" ]; then
     sed -i '/libcameraservice_extension.opsm8150/d' "$AV_BP" || true
 fi
 
-COMMON_BP_FILES=$(find device/oneplus/sm8150-common -name "Android.bp" -o -name "*.mk")
+COMMON_BP_FILES=$(find device/oneplus/sm8150-common -name "Android.bp" -o -name "*.mk" 2>/dev/null || true)
 for bp in $COMMON_BP_FILES; do
     if grep -q "libcameraservice_extension.opsm8150" "$bp"; then
         echo "🩹 Removing reference from $bp..."
@@ -123,41 +116,8 @@ fi
 rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
 rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
 
-# ========================================================
-# Environment configuration
-# ========================================================
-export WITH_ADB_INSECURE=true
-export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=true
-export TARGET_MULTISIM_CONFIG=dsds
-export INFINITY_MAINTAINER="Jihad Hossain"
-export TARGET_HAS_UDFPS=false
-export WITH_GAPPS=true
-export TARGET_RELEASE=trunk_staging
-export ALLOW_MISSING_DEPENDENCIES=true
-export ALLOW_RELEASE_CONFIG_MIXED_TYPES=true
-export TARGET_RELEASE_CONFIG_BUILD_FLAVOR=default
-export BUILD_WITHOUT_SU=true
-export OVERRIDE_ANDROID_VERSION_CHECK=true
-export WITHOUT_SU=true
-export PRODUCT_ARGUMENT_VALIDATION=false
-export FORCE_BUILD_NOTICES=false
-export SKIP_NOTICE_BUILD=true
-export OVERRIDE_NOTICE_FIELDS=true
-
-set +u
-export TOP="$MAIN_DIR"
-
 echo "📦 Sourcing build/envsetup.sh..."
 source build/envsetup.sh
-
-type lunch >/dev/null 2>&1 || {
-    echo "ERROR: lunch not available after sourcing envsetup.sh"
-    exit 1
-}
-
-echo "💾 Setting up swap..."
-setupSwap || true
 
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
@@ -175,14 +135,12 @@ else
     exit 1
 fi
 
-
 echo "🧹 Running installclean..."
 make installclean || true
 
 echo "🏗️ Building Project Infinity-X ROM (m bacon)..."
-m bacon -j16
+m bacon
 
-set -u
 echo "=========================================================="
 echo "✅ Project Infinity-X Build script finished successfully."
 echo "=========================================================="
