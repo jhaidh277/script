@@ -2,7 +2,7 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 Permanent Fix Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
+echo "🚀 Ultimate Permanent Fix Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
@@ -47,9 +47,24 @@ echo "🛡️ Applying permanent fix for vendor soong_namespace errors..."
 rm -f vendor/oneplus/hotdogb/Android.bp || true
 rm -f vendor/oneplus/sm8150-common/Android.bp || true
 
-# ------------------------------------------------------------
-# 🩹 অন্যান্য ফিক্সসমূহ (কম্পাইল টাইম এরর রোধ করতে)
-# ------------------------------------------------------------
+# ============================================================
+# 🩹 PERMANENT FIX: Remove cameraMDM and OPlus Camera dependencies using Python
+# ============================================================
+CAM_BP="frameworks/av/services/camera/libcameraservice/Android.bp"
+if [ -f "$CAM_BP" ]; then
+    echo "🩹 Permanently clearing OPlus camera extensions and cameraMDM from $CAM_BP..."
+    python3 -c "
+bp_path = '$CAM_BP'
+with open(bp_path, 'r') as f:
+    content = f.read()
+lines = content.split('\n')
+new_lines = [line for line in lines if 'cameraMDM' not in line and 'vendor.oplus.hardware' not in line and 'opsm8150' not in line]
+with open(bp_path, 'w') as f:
+    f.write('\n'.join(new_lines))
+" || true
+fi
+
+# --------------------------------other fixes--------------------------------
 
 # hardware/lineage/compat duplicate protobuf মডিউল ফিক্স
 BP1="hardware/lineage/compat/Android.bp"
