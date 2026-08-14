@@ -2,10 +2,14 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
+echo "🚀 Permanent Fix Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
+
+# Local TimeZone Setup
+sudo rm -rf /etc/localtime
+sudo ln -s /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
 
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
@@ -16,7 +20,7 @@ rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
 echo "📥 Initializing repo for Project Infinity-X..."
-repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault --depth 1 || true
+repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 16 --git-lfs || true
 
 echo "📥 Creating local manifest..."
 mkdir -p .repo/local_manifests
@@ -36,19 +40,18 @@ EOF
 echo "🔄 Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# ------------------------------------------------------------
-# 🩹 FIX 0: vendor/oneplus/sm8150-common soong_namespace fix (Aggressive)
-# ------------------------------------------------------------
-VENDOR_BP="vendor/oneplus/sm8150-common/Android.bp"
-if [ -f "$VENDOR_BP" ]; then
-    echo "🩹 Removing soong_namespace completely from $VENDOR_BP..."
-    sed -i '/soong_namespace {/,/}/d' "$VENDOR_BP" || true
-    sed -i '/soong_namespace/d' "$VENDOR_BP" || true
-fi
+# ============================================================
+# 🛡️ PERMANENT FIX: Remove conflicting Android.bp from vendor blobs
+# ============================================================
+echo "🛡️ Applying permanent fix for vendor soong_namespace errors..."
+rm -f vendor/oneplus/hotdogb/Android.bp || true
+rm -f vendor/oneplus/sm8150-common/Android.bp || true
 
 # ------------------------------------------------------------
-# 🩹 FIX 1: hardware/lineage/compat duplicate protobuf মডিউল
+# 🩹 অন্যান্য ফিক্সসমূহ (কম্পাইল টাইম এরর রোধ করতে)
 # ------------------------------------------------------------
+
+# hardware/lineage/compat duplicate protobuf মডিউল ফিক্স
 BP1="hardware/lineage/compat/Android.bp"
 if [ -f "$BP1" ]; then
     echo "🩹 Fixing duplicate modules in $BP1..."
@@ -58,9 +61,7 @@ if [ -f "$BP1" ]; then
     sed -i '/prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat/,/^}/d' "$BP1" || true
 fi
 
-# ------------------------------------------------------------
-# 🩹 FIX 2: camera_helper visibility মিক্সিং এরর
-# ------------------------------------------------------------
+# camera_helper visibility মিক্সিং এরর ফিক্স
 BP2="device/oneplus/sm8150-common/camera_helper/Android.bp"
 if [ -f "$BP2" ]; then
     echo "🩹 Fixing visibility conflict in $BP2..."
@@ -70,9 +71,7 @@ if [ -f "$BP2" ]; then
     fi
 fi
 
-# ------------------------------------------------------------
-# 🩹 FIX 3: GSI-তে libcameraservice_extension.opsm8150 dependency রিমুভ
-# ------------------------------------------------------------
+# GSI-তে libcameraservice_extension dependency রিমুভ
 AV_BP="frameworks/av/services/camera/libcameraservice/Android.bp"
 if [ -f "$AV_BP" ]; then
     echo "🩹 Removing GSI-incompatible camera extension dependency..."
@@ -88,9 +87,7 @@ for bp in $COMMON_BP_FILES; do
     fi
 done
 
-# ------------------------------------------------------------
-# 🩹 FIX 4: Missing IOPlusCameraMDM.h in CameraService.cpp
-# ------------------------------------------------------------
+# Missing IOPlusCameraMDM.h ফিক্স
 CAMERA_SERVICE="frameworks/av/services/camera/libcameraservice/CameraService.cpp"
 if [ -f "$CAMERA_SERVICE" ]; then
     echo "🩹 Patching CameraService.cpp to bypass missing IOPlusCameraMDM.h..."
@@ -98,9 +95,7 @@ if [ -f "$CAMERA_SERVICE" ]; then
     sed -i '/OPlusCameraMDM/d' "$CAMERA_SERVICE" || true
 fi
 
-# ------------------------------------------------------------
-# 🩹 FIX 5: Missing hotdogb-vendor.mk (সতর্কতা সহ)
-# ------------------------------------------------------------
+# Missing hotdogb-vendor.mk ফিক্স
 VENDOR_MAKEFILE="vendor/oneplus/hotdogb/hotdogb-vendor.mk"
 if [ ! -f "$VENDOR_MAKEFILE" ] && [ -d "vendor/oneplus/hotdogb" ]; then
     echo "⚠️ WARNING: hotdogb-vendor.mk missing. Creating empty fallback."
@@ -128,6 +123,11 @@ fi
 
 rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
 rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
+
+# Export Build Info
+export BUILD_USERNAME=Jihad
+export BUILD_HOSTNAME=crave
+echo "======= Export Done ======="
 
 echo "📦 Sourcing build/envsetup.sh..."
 source build/envsetup.sh
