@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 echo "=========================================================="
 echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
 echo "=========================================================="
@@ -21,9 +24,9 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
-  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
+  <project name="jhaidh277/device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
   <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
-  <project name="hardware/dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
+  <project name="jhaidh277/hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
   <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
   <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
@@ -32,6 +35,16 @@ EOF
 
 echo "🔄 Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
+
+# ------------------------------------------------------------
+# 🩹 FIX 0: vendor/oneplus/sm8150-common soong_namespace fix (Aggressive)
+# ------------------------------------------------------------
+VENDOR_BP="vendor/oneplus/sm8150-common/Android.bp"
+if [ -f "$VENDOR_BP" ]; then
+    echo "🩹 Removing soong_namespace completely from $VENDOR_BP..."
+    sed -i '/soong_namespace {/,/}/d' "$VENDOR_BP" || true
+    sed -i '/soong_namespace/d' "$VENDOR_BP" || true
+fi
 
 # ------------------------------------------------------------
 # 🩹 FIX 1: hardware/lineage/compat duplicate protobuf মডিউল
