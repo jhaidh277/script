@@ -48,21 +48,27 @@ rm -f vendor/oneplus/hotdogb/Android.bp || true
 rm -f vendor/oneplus/sm8150-common/Android.bp || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Remove cameraMDM and OPlus Camera dependencies using Python
+# 🩹 PERMANENT FIX: Remove cameraMDM from all frameworks/av Android.bp files using Python
 # ============================================================
-CAM_BP="frameworks/av/services/camera/libcameraservice/Android.bp"
-if [ -f "$CAM_BP" ]; then
-    echo "🩹 Permanently clearing OPlus camera extensions and cameraMDM from $CAM_BP..."
-    python3 -c "
-bp_path = '$CAM_BP'
-with open(bp_path, 'r') as f:
-    content = f.read()
-lines = content.split('\n')
-new_lines = [line for line in lines if 'cameraMDM' not in line and 'vendor.oplus.hardware' not in line and 'opsm8150' not in line]
-with open(bp_path, 'w') as f:
-    f.write('\n'.join(new_lines))
+echo "🩹 Permanently clearing cameraMDM dependencies across frameworks/av..."
+python3 -c "
+import os
+for root, dirs, files in os.walk('frameworks/av'):
+    for file in files:
+        if file == 'Android.bp':
+            bp_path = os.path.join(root, file)
+            try:
+                with open(bp_path, 'r') as f:
+                    content = f.read()
+                if 'cameraMDM' in content or 'vendor.oplus.hardware' in content:
+                    lines = content.split('\n')
+                    new_lines = [line for line in lines if 'cameraMDM' not in line and 'vendor.oplus.hardware' not in line and 'opsm8150' not in line]
+                    with open(bp_path, 'w') as f:
+                        f.write('\n'.join(new_lines))
+                    print(f'Cleaned: {bp_path}')
+            except Exception as e:
+                print(f'Error processing {bp_path}: {e}')
 " || true
-fi
 
 # --------------------------------other fixes--------------------------------
 
