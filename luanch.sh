@@ -30,7 +30,7 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
   <project name="jhaidh277/device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
   <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
-  <project name="jhaidh277/hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
+  <project name="hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
   <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
   <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
@@ -48,7 +48,7 @@ rm -f vendor/oneplus/hotdogb/Android.bp || true
 rm -f vendor/oneplus/sm8150-common/Android.bp || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Remove cameraMDM from all frameworks/av Android.bp files using Python
+# 🩹 PERMANENT FIX: Remove cameraMDM from frameworks/av
 # ============================================================
 echo "🩹 Permanently clearing cameraMDM dependencies across frameworks/av..."
 python3 -c "
@@ -65,10 +65,26 @@ for root, dirs, files in os.walk('frameworks/av'):
                     new_lines = [line for line in lines if 'cameraMDM' not in line and 'vendor.oplus.hardware' not in line and 'opsm8150' not in line]
                     with open(bp_path, 'w') as f:
                         f.write('\n'.join(new_lines))
-                    print(f'Cleaned: {bp_path}')
-            except Exception as e:
-                print(f'Error processing {bp_path}: {e}')
+            except Exception:
+                pass
 " || true
+
+# ============================================================
+# 🩹 PERMANENT FIX: Remove WfdCommon from frameworks/base/boot/Android.bp
+# ============================================================
+WFD_BP="frameworks/base/boot/Android.bp"
+if [ -f "$WFD_BP" ]; then
+    echo "🩹 Permanently removing WfdCommon dependency from $WFD_BP..."
+    python3 -c "
+bp_path = '$WFD_BP'
+with open(bp_path, 'r') as f:
+    content = f.read()
+lines = content.split('\n')
+new_lines = [line for line in lines if 'WfdCommon' not in line]
+with open(bp_path, 'w') as f:
+    f.write('\n'.join(new_lines))
+" || true
+fi
 
 # --------------------------------other fixes--------------------------------
 
