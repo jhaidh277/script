@@ -70,11 +70,11 @@ for root, dirs, files in os.walk('frameworks/av'):
 " || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Remove WfdCommon from frameworks/base/boot/Android.bp robustly
+# 🩹 PERMANENT FIX: Aggressive removal of WfdCommon from frameworks/base/boot/Android.bp
 # ============================================================
 WFD_BP="frameworks/base/boot/Android.bp"
 if [ -f "$WFD_BP" ]; then
-    echo "🩹 Permanently removing WfdCommon from $WFD_BP..."
+    echo "🩹 Permanently purging WfdCommon from $WFD_BP..."
     python3 -c "
 bp_path = '$WFD_BP'
 with open(bp_path, 'r') as f:
@@ -173,6 +173,18 @@ source build/envsetup.sh
 
 if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
+fi
+
+# Double check WfdCommon removal right before lunch/build to prevent any race condition
+if [ -f "$WFD_BP" ]; then
+    python3 -c "
+bp_path = '$WFD_BP'
+with open(bp_path, 'r') as f:
+    lines = f.readlines()
+new_lines = [l for l in lines if 'WfdCommon' not in l]
+with open(bp_path, 'w') as f:
+    f.writelines(new_lines)
+" || true
 fi
 
 echo "🍽️ Lunching Project Infinity-X target..."
