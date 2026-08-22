@@ -70,19 +70,21 @@ for root, dirs, files in os.walk('frameworks/av'):
 " || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Remove WfdCommon from frameworks/base/boot/Android.bp
+# 🩹 PERMANENT FIX: Remove WfdCommon from frameworks/base/boot/Android.bp robustly
 # ============================================================
 WFD_BP="frameworks/base/boot/Android.bp"
 if [ -f "$WFD_BP" ]; then
-    echo "🩹 Permanently removing WfdCommon dependency from $WFD_BP..."
+    echo "🩹 Permanently removing WfdCommon from $WFD_BP..."
     python3 -c "
 bp_path = '$WFD_BP'
 with open(bp_path, 'r') as f:
-    content = f.read()
-lines = content.split('\n')
-new_lines = [line for line in lines if 'WfdCommon' not in line]
+    lines = f.readlines()
+new_lines = []
+for line in lines:
+    if 'WfdCommon' not in line:
+        new_lines.append(line)
 with open(bp_path, 'w') as f:
-    f.write('\n'.join(new_lines))
+    f.writelines(new_lines)
 " || true
 fi
 
