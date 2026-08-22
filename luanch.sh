@@ -70,21 +70,20 @@ for root, dirs, files in os.walk('frameworks/av'):
 " || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Aggressive removal of WfdCommon from frameworks/base/boot/Android.bp
+# 🩹 PERMANENT FIX: Robust Python replacement for WfdCommon in frameworks/base/boot/Android.bp
 # ============================================================
 WFD_BP="frameworks/base/boot/Android.bp"
 if [ -f "$WFD_BP" ]; then
-    echo "🩹 Permanently purging WfdCommon from $WFD_BP..."
+    echo "🩹 Permanently purging WfdCommon completely using Python string replacement..."
     python3 -c "
 bp_path = '$WFD_BP'
 with open(bp_path, 'r') as f:
-    lines = f.readlines()
-new_lines = []
-for line in lines:
-    if 'WfdCommon' not in line:
-        new_lines.append(line)
+    content = f.read()
+# Replace variations of WfdCommon entries inside arrays
+content = content.replace('\"WfdCommon\",', '')
+content = content.replace('\"WfdCommon\"', '')
 with open(bp_path, 'w') as f:
-    f.writelines(new_lines)
+    f.write(content)
 " || true
 fi
 
@@ -175,15 +174,15 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# Double check WfdCommon removal right before lunch/build to prevent any race condition
+# Absolute final safeguard right before lunch
 if [ -f "$WFD_BP" ]; then
     python3 -c "
 bp_path = '$WFD_BP'
 with open(bp_path, 'r') as f:
-    lines = f.readlines()
-new_lines = [l for l in lines if 'WfdCommon' not in l]
+    content = f.read()
+content = content.replace('\"WfdCommon\",', '').replace('\"WfdCommon\"', '')
 with open(bp_path, 'w') as f:
-    f.writelines(new_lines)
+    f.write(content)
 " || true
 fi
 
