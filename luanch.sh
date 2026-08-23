@@ -70,22 +70,26 @@ for root, dirs, files in os.walk('frameworks/av'):
 " || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Robust Python replacement for WfdCommon in frameworks/base/boot/Android.bp
+# 🩹 PERMANENT FIX: Global recursive purge of WfdCommon from ALL Android.bp files
 # ============================================================
-WFD_BP="frameworks/base/boot/Android.bp"
-if [ -f "$WFD_BP" ]; then
-    echo "🩹 Permanently purging WfdCommon completely using Python string replacement..."
-    python3 -c "
-bp_path = '$WFD_BP'
-with open(bp_path, 'r') as f:
-    content = f.read()
-# Replace variations of WfdCommon entries inside arrays
-content = content.replace('\"WfdCommon\",', '')
-content = content.replace('\"WfdCommon\"', '')
-with open(bp_path, 'w') as f:
-    f.write(content)
+echo "🩹 Globally purging WfdCommon from all Android.bp files across the source..."
+python3 -c "
+import os
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file == 'Android.bp':
+            bp_path = os.path.join(root, file)
+            try:
+                with open(bp_path, 'r') as f:
+                    content = f.read()
+                if 'WfdCommon' in content:
+                    content = content.replace('\"WfdCommon\",', '').replace('\"WfdCommon\"', '')
+                    with open(bp_path, 'w') as f:
+                        f.write(content)
+                    print(f'Purged WfdCommon from: {bp_path}')
+            except Exception:
+                pass
 " || true
-fi
 
 # --------------------------------other fixes--------------------------------
 
@@ -175,16 +179,22 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
 fi
 
 # Absolute final safeguard right before lunch
-if [ -f "$WFD_BP" ]; then
-    python3 -c "
-bp_path = '$WFD_BP'
-with open(bp_path, 'r') as f:
-    content = f.read()
-content = content.replace('\"WfdCommon\",', '').replace('\"WfdCommon\"', '')
-with open(bp_path, 'w') as f:
-    f.write(content)
+python3 -c "
+import os
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file == 'Android.bp':
+            bp_path = os.path.join(root, file)
+            try:
+                with open(bp_path, 'r') as f:
+                    content = f.read()
+                if 'WfdCommon' in content:
+                    content = content.replace('\"WfdCommon\",', '').replace('\"WfdCommon\"', '')
+                    with open(bp_path, 'w') as f:
+                        f.write(content)
+            except Exception:
+                pass
 " || true
-fi
 
 echo "🍽️ Lunching Project Infinity-X target..."
 if lunch infinity_hotdogb-userdebug; then
