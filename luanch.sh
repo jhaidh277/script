@@ -69,39 +69,6 @@ for root, dirs, files in os.walk('frameworks/av'):
                 pass
 " || true
 
-# ============================================================
-# 🩹 CRITICAL FIX: Direct AST-Style Block Clean for WfdCommon
-# ============================================================
-echo "🩹 Patching frameworks/base/boot/Android.bp and build/soong/Android.bp..."
-
-python3 -c "
-import re
-
-files_to_fix = [
-    'frameworks/base/boot/Android.bp',
-    'build/soong/Android.bp',
-    'build/make/target/product/gsi/Android.bp'
-]
-
-for file_path in files_to_fix:
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        # WfdCommon মডিউল নাম এবং তার আশেপাশের কমা/স্পেস রিমুভ
-        cleaned = re.sub(r'\"WfdCommon\",?\s*', '', content)
-        
-        with open(file_path, 'w') as f:
-            f.write(cleaned)
-        print(f'Successfully purged WfdCommon from {file_path}')
-    except Exception as e:
-        print(f'Skipped {file_path}: {e}')
-" || true
-
-# vendor/lineage বা infinity সোর্সে PRODUCT_BOOT_JARS থেকে WfdCommon রিমুভ
-find vendor/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
-find device/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
-
 # --------------------------------other fixes--------------------------------
 
 # hardware/lineage/compat duplicate protobuf মডিউল ফিক্স
@@ -189,24 +156,6 @@ if [ -f build/make/target/product/gsi/Android.bp ]; then
     sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-# Absolute final safeguard right before lunch
-python3 -c "
-import os
-for root, dirs, files in os.walk('.'):
-    for file in files:
-        if file == 'Android.bp':
-            bp_path = os.path.join(root, file)
-            try:
-                with open(bp_path, 'r') as f:
-                    content = f.read()
-                if 'WfdCommon' in content:
-                    content = content.replace('\"WfdCommon\",', '').replace('\"WfdCommon\"', '')
-                    with open(bp_path, 'w') as f:
-                        f.write(content)
-            except Exception:
-                pass
-" || true
-
 echo "🍽️ Lunching Project Infinity-X target..."
 if lunch infinity_hotdogb-userdebug; then
     echo "✅ Lunched infinity_hotdogb-userdebug"
@@ -218,6 +167,32 @@ else
     echo "ERROR: All lunch targets failed. Aborting."
     exit 1
 fi
+
+# ============================================================
+# 🩹 FINAL CRITICAL PURGE: Post-Lunch Regex Clean for WfdCommon
+# ============================================================
+echo "🧹 Executing final regex purge of WfdCommon right before build..."
+python3 -c "
+import os, re
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file == 'Android.bp':
+            bp_path = os.path.join(root, file)
+            try:
+                with open(bp_path, 'r') as f:
+                    content = f.read()
+                if 'WfdCommon' in content:
+                    cleaned = re.sub(r'\"WfdCommon\",?\s*', '', content)
+                    with open(bp_path, 'w') as f:
+                        f.write(cleaned)
+                    print(f'Purged WfdCommon from: {bp_path}')
+            except Exception:
+                pass
+" || true
+
+# Make/Vendor-level cleanup for WfdCommon
+find vendor/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
+find device/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
 
 echo "🧹 Running installclean..."
 make installclean || true
