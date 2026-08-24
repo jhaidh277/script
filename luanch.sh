@@ -70,26 +70,37 @@ for root, dirs, files in os.walk('frameworks/av'):
 " || true
 
 # ============================================================
-# 🩹 PERMANENT FIX: Global recursive purge of WfdCommon from ALL Android.bp files
+# 🩹 CRITICAL FIX: Direct AST-Style Block Clean for WfdCommon
 # ============================================================
-echo "🩹 Globally purging WfdCommon from all Android.bp files across the source..."
+echo "🩹 Patching frameworks/base/boot/Android.bp and build/soong/Android.bp..."
+
 python3 -c "
-import os
-for root, dirs, files in os.walk('.'):
-    for file in files:
-        if file == 'Android.bp':
-            bp_path = os.path.join(root, file)
-            try:
-                with open(bp_path, 'r') as f:
-                    content = f.read()
-                if 'WfdCommon' in content:
-                    content = content.replace('\"WfdCommon\",', '').replace('\"WfdCommon\"', '')
-                    with open(bp_path, 'w') as f:
-                        f.write(content)
-                    print(f'Purged WfdCommon from: {bp_path}')
-            except Exception:
-                pass
+import re
+
+files_to_fix = [
+    'frameworks/base/boot/Android.bp',
+    'build/soong/Android.bp',
+    'build/make/target/product/gsi/Android.bp'
+]
+
+for file_path in files_to_fix:
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        # WfdCommon মডিউল নাম এবং তার আশেপাশের কমা/স্পেস রিমুভ
+        cleaned = re.sub(r'\"WfdCommon\",?\s*', '', content)
+        
+        with open(file_path, 'w') as f:
+            f.write(cleaned)
+        print(f'Successfully purged WfdCommon from {file_path}')
+    except Exception as e:
+        print(f'Skipped {file_path}: {e}')
 " || true
+
+# vendor/lineage বা infinity সোর্সে PRODUCT_BOOT_JARS থেকে WfdCommon রিমুভ
+find vendor/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
+find device/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
 
 # --------------------------------other fixes--------------------------------
 
