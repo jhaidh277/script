@@ -40,20 +40,11 @@ echo "🔄 Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
 # ============================================================
-# 🩹 SAFEGUARD: Fix hardware/dolby git tracking for Soong/Repo
+# 📥 SAFE DIRECT GIT CLONE: hardware/dolby (Must be after Crave Resync)
 # ============================================================
-if [ ! -d "hardware/dolby" ]; then
-    echo "🩹 Cloning missing hardware/dolby..."
-    git clone --depth=1 https://github.com/jhaidh277/hardware_dolby_lunaris.git -b 16 hardware/dolby
-elif [ ! -d "hardware/dolby/.git" ]; then
-    echo "🩹 Repairing missing .git in hardware/dolby..."
-    cd hardware/dolby
-    git init
-    git remote add origin https://github.com/jhaidh277/hardware_dolby_lunaris.git
-    git fetch --depth=1 origin 16
-    git reset --hard origin/16
-    cd "$MAIN_DIR"
-fi
+echo "📥 Ensuring hardware_dolby_lunaris exists via Git clone..."
+rm -rf hardware/dolby || true
+git clone --depth=1 https://github.com/jhaidh277/hardware_dolby_lunaris.git -b 16 hardware/dolby
 
 # ============================================================
 # 🛡️ PERMANENT FIX: Remove conflicting Android.bp from vendor blobs
