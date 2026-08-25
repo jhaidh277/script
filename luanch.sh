@@ -107,12 +107,15 @@ for bp in $COMMON_BP_FILES; do
     fi
 done
 
-# Missing IOPlusCameraMDM.h ফিক্স
+# ============================================================
+# 🩹 CRITICAL FIX: Safe C++ Patch for CameraService.cpp
+# ============================================================
 CAMERA_SERVICE="frameworks/av/services/camera/libcameraservice/CameraService.cpp"
 if [ -f "$CAMERA_SERVICE" ]; then
-    echo "🩹 Patching CameraService.cpp to bypass missing IOPlusCameraMDM.h..."
+    echo "🩹 Safely patching CameraService.cpp to bypass OPlus/Vendor extension calls..."
     sed -i '/#include <vendor\/oplus\/hardware\/cameraMDM\/2.0\/IOPlusCameraMDM.h>/d' "$CAMERA_SERVICE" || true
-    sed -i '/OPlusCameraMDM/d' "$CAMERA_SERVICE" || true
+    sed -i 's/.*gVendorCameraProviderService.*/\/\/ &/g' "$CAMERA_SERVICE" || true
+    sed -i 's/.*OPlusCameraMDM.*/\/\/ &/g' "$CAMERA_SERVICE" || true
 fi
 
 # Missing hotdogb-vendor.mk ফিক্স
