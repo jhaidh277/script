@@ -7,8 +7,8 @@ echo "=========================================================="
 
 MAIN_DIR=$(pwd)
 
-# Local TimeZone Setup
-sudo rm -rf /etc/localtime
+# 🕒 Local TimeZone Setup (Resetting existing symlink safely)
+sudo rm -f /etc/localtime
 sudo ln -s /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
 
 export USE_CCACHE=0
@@ -30,7 +30,6 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
   <project name="jhaidh277/device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
   <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
-  <project name="hardware_dolby_lunaris" path="hardware/dolby" remote="github" revision="16" />
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
   <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
   <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
@@ -39,6 +38,22 @@ EOF
 
 echo "🔄 Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
+
+# ============================================================
+# 🩹 SAFEGUARD: Fix hardware/dolby git tracking for Soong/Repo
+# ============================================================
+if [ ! -d "hardware/dolby" ]; then
+    echo "🩹 Cloning missing hardware/dolby..."
+    git clone --depth=1 https://github.com/jhaidh277/hardware_dolby_lunaris.git -b 16 hardware/dolby
+elif [ ! -d "hardware/dolby/.git" ]; then
+    echo "🩹 Repairing missing .git in hardware/dolby..."
+    cd hardware/dolby
+    git init
+    git remote add origin https://github.com/jhaidh277/hardware_dolby_lunaris.git
+    git fetch --depth=1 origin 16
+    git reset --hard origin/16
+    cd "$MAIN_DIR"
+fi
 
 # ============================================================
 # 🛡️ PERMANENT FIX: Remove conflicting Android.bp from vendor blobs
