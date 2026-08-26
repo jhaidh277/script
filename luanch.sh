@@ -16,7 +16,6 @@ export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
 echo "🧹 Cleaning previous build artifacts..."
-rm -rf out/
 rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
