@@ -8,7 +8,7 @@ echo "=========================================================="
 MAIN_DIR=$(pwd)
 
 # 🕒 Local TimeZone Setup
-sudo ln -s /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
+export TZ="Asia/Dhaka"
 
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
