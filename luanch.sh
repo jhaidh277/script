@@ -1,139 +1,223 @@
 #!/bin/bash
-
 set -e
 
 echo "=========================================================="
-echo "🚀 Infinity‑X Build for Beryl (redmi note 14 5g)"
+echo "🚀 Ultimate Permanent Fix Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
 echo "=========================================================="
 
-MAIN_DIR="$(pwd)"
+MAIN_DIR=$(pwd)
 
-# ---------------------------------------------------------
-# 1. Environment basics
-# ---------------------------------------------------------
+# 🕒 Local TimeZone Setup (Resetting existing symlink safely)
+sudo rm -f /etc/localtime
+sudo ln -s /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
 
 export USE_CCACHE=0
+export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
-export WITH_ADB_INSECURE=true
-export SELINUX_IGNORE_NEVERALLOWS=true
-export TARGET_GAPPS_PACKAGE_TYPE=false
-export TARGET_MULTISIM_CONFIG=dsds
 
-echo "⚙️  Basic environment configured."
+echo "🧹 Force cleaning corrupted directories..."
+rm -rf .repo/local_manifests || true
+rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
-# --- Helper functions ---
-remove_line_contains() {
-    local file="$1"
-    local pattern="$2"
-    [ -f "$file" ] && sed -i "\|$pattern|d" "$file" || true
-}
+echo "📥 Initializing repo for Project Infinity-X..."
+repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 16 --git-lfs || true
 
-fix_android_products_mk() {
-    local file="$1"
-    local device="$2"
-    [ -d "$(dirname "$file")" ] || return 0
-    python3 - "$file" "$device" <<'PY'
-import sys, os
-file_path, device = sys.argv[1], sys.argv[2]
-os.makedirs(os.path.dirname(file_path), exist_ok=True)
-with open(file_path, 'w', encoding='utf-8') as f:
-    f.write(
-        f'PRODUCT_MAKEFILES := \\\n'
-        f'    $(LOCAL_DIR)/{device}.mk\n\n'
-        f'COMMON_LUNCH_CHOICES := \\\n'
-        f'    {device}-user \\\n'
-        f'    {device}-userdebug \\\n'
-        f'    {device}-eng\n'
-    )
-PY
-}
+echo "📥 Creating local manifest..."
+mkdir -p .repo/local_manifests
+cat << 'EOF' > .repo/local_manifests/roomservice.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
+  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
+  <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
+  <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
+  <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
+  <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
+</manifest>
+EOF
 
-echo "🧹 Cleaning local manifests..."
-rm -rf .repo/local_manifests .repo/local_manifest.xml || true
+echo "🔄 Syncing sources via Crave resync..."
+/opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-echo "📥 Running repo init for Infinity-X (branch 16)..."
-repo init --no-repo-verify --git-lfs \
-    -u https://github.com/ProjectInfinity-X/manifest \
-    -b 16 \
-    -g default,-mips,-darwin,-notdefault \
-    --depth 1 || true
+# ============================================================
+# 📥 SAFE DIRECT GIT CLONE: hardware/dolby (Must be after Crave Resync)
+# ============================================================
+echo "📥 Ensuring hardware_dolby_lunaris exists via Git clone..."
+rm -rf hardware/dolby || true
+git clone --depth=1 https://github.com/jhaidh277/hardware_dolby_lunaris.git -b 16 hardware/dolby
 
-mkdir -p .repo/repo/hooks || true
+# ============================================================
+# 🛡️ PERMANENT FIX: Remove conflicting Android.bp from vendor blobs
+# ============================================================
+echo "🛡️ Applying permanent fix for vendor soong_namespace errors..."
+rm -f vendor/oneplus/hotdogb/Android.bp || true
+rm -f vendor/oneplus/sm8150-common/Android.bp || true
 
-echo "📥 Cloning local manifest for beryl..."
-rm -rf .repo/local_manifests
-git clone https://github.com/jhaidh277/hotdogb_local_manifest \
-    --depth 1 \
-    -b beryl \
-    .repo/local_manifests
+# ============================================================
+# 🩹 PERMANENT FIX: Remove cameraMDM from frameworks/av
+# ============================================================
+echo "🩹 Permanently clearing cameraMDM dependencies across frameworks/av..."
+python3 -c "
+import os
+for root, dirs, files in os.walk('frameworks/av'):
+    for file in files:
+        if file == 'Android.bp':
+            bp_path = os.path.join(root, file)
+            try:
+                with open(bp_path, 'r') as f:
+                    content = f.read()
+                if 'cameraMDM' in content or 'vendor.oplus.hardware' in content:
+                    lines = content.split('\n')
+                    new_lines = [line for line in lines if 'cameraMDM' not in line and 'vendor.oplus.hardware' not in line and 'opsm8150' not in line]
+                    with open(bp_path, 'w') as f:
+                        f.write('\n'.join(new_lines))
+            except Exception:
+                pass
+" || true
 
-if [ -x /opt/crave/resync.sh ]; then
-    echo "🔄 Syncing sources via Crave resync..."
-    /opt/crave/resync.sh
+# --------------------------------other fixes--------------------------------
+
+# hardware/lineage/compat duplicate protobuf মডিউল ফিক্স
+BP1="hardware/lineage/compat/Android.bp"
+if [ -f "$BP1" ]; then
+    echo "🩹 Fixing duplicate modules in $BP1..."
+    sed -i '/prebuilt_libprotobuf-cpp-full-3.9.1-vendorcompat/,/^}/d' "$BP1" || true
+    sed -i '/prebuilt_libprotobuf-cpp-lite-3.9.1-vendorcompat/,/^}/d' "$BP1" || true
+    sed -i '/prebuilt_libprotobuf-cpp-full-21.12-vendorcompat/,/^}/d' "$BP1" || true
+    sed -i '/prebuilt_libprotobuf-cpp-lite-21.12-vendorcompat/,/^}/d' "$BP1" || true
 fi
 
-echo "📦 Sourcing build/envsetup.sh ..."
-source build/envsetup.sh
-
-echo "🧩 Fixing AndroidProducts.mk for infinity_beryl..."
-fix_android_products_mk "device/xiaomi/beryl/AndroidProducts.mk" "infinity_beryl"
-
-echo "🧩 Creating missing kernel module list files..."
-mkdir -p device/xiaomi/beryl-kernel
-: > device/xiaomi/beryl-kernel/modules.load
-: > device/xiaomi/beryl-kernel/modules.load.vendor_ramdisk
-: > device/xiaomi/beryl-kernel/modules.load.recovery
-
-echo "🧼 Removing GSI Calendar entry..."
-if [ -f build/make/target/product/gsi/Android.bp ]; then
-    remove_line_contains "build/make/target/product/gsi/Android.bp" "Calendar"
+# camera_helper visibility মিক্সিং এরর ফিক্স
+BP2="device/oneplus/sm8150-common/camera_helper/Android.bp"
+if [ -f "$BP2" ]; then
+    echo "🩹 Fixing visibility conflict in $BP2..."
+    sed -i '/visibility: \[/,/\],/d' "$BP2" || true
+    if [ ! -f "device/oneplus/sm8150-common/camera_helper/CameraProviderExtension.cpp" ]; then
+        touch device/oneplus/sm8150-common/camera_helper/CameraProviderExtension.cpp
+    fi
 fi
 
-echo "🧼 Removing duplicate protobuf vendorcompat modules..."
-for file in "hardware/lineage/compat/Android.bp" "prebuilts/misc/protobuf_vendorcompat/Android.bp"; do
-    sed -i '/prebuilt_libprotobuf-cpp/d' "$file" || true
+# GSI-তে libcameraservice_extension dependency রিমুভ
+AV_BP="frameworks/av/services/camera/libcameraservice/Android.bp"
+if [ -f "$AV_BP" ]; then
+    echo "🩹 Removing GSI-incompatible camera extension dependency..."
+    sed -i '/"libcameraservice_extension.opsm8150"/d' "$AV_BP" || true
+    sed -i '/libcameraservice_extension.opsm8150/d' "$AV_BP" || true
+fi
+
+COMMON_BP_FILES=$(find device/oneplus/sm8150-common -name "Android.bp" -o -name "*.mk" 2>/dev/null || true)
+for bp in $COMMON_BP_FILES; do
+    if grep -q "libcameraservice_extension.opsm8150" "$bp"; then
+        echo "🩹 Removing reference from $bp..."
+        sed -i '/libcameraservice_extension.opsm8150/d' "$bp" || true
+    fi
 done
 
-echo "🧼 Fixing vendor/xiaomi/beryl and sensors namespace..."
-if [ -f vendor/xiaomi/beryl/Android.bp ]; then
-    remove_line_contains "vendor/xiaomi/beryl/Android.bp" "hardware/lineage/interfaces/power"
-    remove_line_contains "vendor/xiaomi/beryl/Android.bp" "hardware/lineage/compat"
-    sed -i 's#hardware/lineage/interfaces/power-libperfmgr#hardware/lineage/interfaces/power#g' \
-        vendor/xiaomi/beryl/Android.bp || true
+# ============================================================
+# 🩹 CRITICAL FIX: Safe C++ Patch for CameraService.cpp
+# ============================================================
+CAMERA_SERVICE="frameworks/av/services/camera/libcameraservice/CameraService.cpp"
+if [ -f "$CAMERA_SERVICE" ]; then
+    echo "🩹 Safely patching CameraService.cpp to bypass OPlus/Vendor extension calls..."
+    sed -i '/#include <vendor\/oplus\/hardware\/cameraMDM\/2.0\/IOPlusCameraMDM.h>/d' "$CAMERA_SERVICE" || true
+    sed -i 's/.*gVendorCameraProviderService.*/\/\/ &/g' "$CAMERA_SERVICE" || true
+    sed -i 's/.*OPlusCameraMDM.*/\/\/ &/g' "$CAMERA_SERVICE" || true
 fi
 
-# Sensors Android.bp ব্র্যাকেট/EOF এরর এড়াতে মিনিমাল Soong ফাইল
-if [ -d hardware/mediatek/sensors ]; then
-    cat <<EOF > hardware/mediatek/sensors/Android.bp
-soong_namespace {
-}
-EOF
+# Missing hotdogb-vendor.mk ফিক্স
+VENDOR_MAKEFILE="vendor/oneplus/hotdogb/hotdogb-vendor.mk"
+if [ ! -f "$VENDOR_MAKEFILE" ] && [ -d "vendor/oneplus/hotdogb" ]; then
+    echo "⚠️ WARNING: hotdogb-vendor.mk missing. Creating empty fallback."
+    touch "$VENDOR_MAKEFILE"
 fi
 
-echo "🧼 Fixing vibrator effect libc++fs dependency..."
-if [ -f hardware/xiaomi/vibrator/effect/Android.bp ]; then
-    sed -i 's/"libc++fs"/"libc++"/g' hardware/xiaomi/vibrator/effect/Android.bp || true
+# system.prop injection
+PROP_FILE="device/oneplus/hotdogb/system.prop"
+if [ -f "$PROP_FILE" ]; then
+    grep -q "ro.product.marketname" "$PROP_FILE" || echo "ro.product.marketname=OnePlus 7T" >> "$PROP_FILE"
+    grep -q "ro.infinity.soc" "$PROP_FILE" || echo "ro.infinity.soc=Qualcomm Snapdragon 855+" >> "$PROP_FILE"
+    grep -q "ro.infinity.camera" "$PROP_FILE" || echo "ro.infinity.camera=48 MP + 12 MP + 16 MP" >> "$PROP_FILE"
 fi
 
-echo "🧼 Fixing vendor.lineage.touch HIDL dependency..."
-if [ -f hardware/xiaomi/hidl/touch/Android.bp ]; then
-    sed -i 's/"vendor.lineage.touch@1.0"/"vendor.lineage.touch"/g' \
-        hardware/xiaomi/hidl/touch/Android.bp || true
+# ============================================================
+# 🧬 KernelSU Integration & Safe Defconfig Patch
+# ============================================================
+echo "🧬 Enabling KernelSU in crDroid Kernel Source..."
+if [ -d "kernel/oneplus/sm8150" ]; then
+    cd kernel/oneplus/sm8150
+    
+    # Run KSU setup (skip silently if pre-patched)
+    curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash - || true
+    
+    # Enable KSU flags across defconfigs
+    find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
+        sed -i '/CONFIG_KSU/d' "$defconfig" || true
+        echo "CONFIG_KSU=y" >> "$defconfig"
+        echo "CONFIG_KSU_OVERLAYFS_ON_KSU=y" >> "$defconfig"
+    done
+    cd "$MAIN_DIR"
 fi
 
-# ---------------------------------------------------------
-# 11. Fixing missing Bluetooth Audio dependencies
-# ---------------------------------------------------------
-echo "🧼 Fixing missing Bluetooth Audio dependencies in vendor/xiaomi/beryl/Android.bp..."
-if [ -f "vendor/xiaomi/beryl/Android.bp" ]; then
-    sed -i '/vendor.mediatek.hardware.bluetooth.audio@2.1/d' vendor/xiaomi/beryl/Android.bp || true
-    sed -i '/vendor.mediatek.hardware.bluetooth.audio@2.2/d' vendor/xiaomi/beryl/Android.bp || true
-    sed -i 's/"vendor.mediatek.hardware.bluetooth.audio@2.1",//g' vendor/xiaomi/beryl/Android.bp || true
-    sed -i 's/"vendor.mediatek.hardware.bluetooth.audio@2.2",//g' vendor/xiaomi/beryl/Android.bp || true
+
+rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
+rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
+
+# Export Build Info
+export BUILD_USERNAME=Jihad
+export BUILD_HOSTNAME=crave
+echo "======= Export Done ======="
+
+echo "📦 Sourcing build/envsetup.sh..."
+source build/envsetup.sh
+
+if [ -f build/make/target/product/gsi/Android.bp ]; then
+    sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
 fi
 
-echo "🍽️ Trying to lunch infinity_beryl ..."
-lunch infinity_beryl-userdebug
+echo "🍽️ Lunching Project Infinity-X target..."
+if lunch infinity_hotdogb-userdebug; then
+    echo "✅ Lunched infinity_hotdogb-userdebug"
+elif lunch lineage_hotdogb-userdebug; then
+    echo "✅ Lunched lineage_hotdogb-userdebug"
+elif lunch hotdogb-userdebug; then
+    echo "✅ Lunched hotdogb-userdebug"
+else
+    echo "ERROR: All lunch targets failed. Aborting."
+    exit 1
+fi
 
-echo "🏗️ Starting Infinity-X build..."
-m bacon -j"$(nproc)"
+# ============================================================
+# 🩹 FINAL CRITICAL PURGE: Post-Lunch Regex Clean for WfdCommon
+# ============================================================
+echo "🧹 Executing final regex purge of WfdCommon right before build..."
+python3 -c "
+import os, re
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file == 'Android.bp':
+            bp_path = os.path.join(root, file)
+            try:
+                with open(bp_path, 'r') as f:
+                    content = f.read()
+                if 'WfdCommon' in content:
+                    cleaned = re.sub(r'\"WfdCommon\",?\s*', '', content)
+                    with open(bp_path, 'w') as f:
+                        f.write(cleaned)
+                    print(f'Purged WfdCommon from: {bp_path}')
+            except Exception:
+                pass
+" || true
+
+# Make/Vendor-level cleanup for WfdCommon
+find vendor/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
+find device/ -type f \( -name "*.mk" -o -name "*.bp" \) -exec sed -i '/WfdCommon/d' {} + 2>/dev/null || true
+
+echo "🧹 Running installclean..."
+make installclean || true
+
+echo "🏗️ Building Project Infinity-X ROM (m bacon)..."
+m bacon
+
+echo "=========================================================="
+echo "✅ Project Infinity-X Build script finished successfully."
+echo "=========================================================="
