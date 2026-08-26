@@ -1,93 +1,114 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
 echo "=========================================================="
-echo "🚀 Starting Build Script for Project Infinity-X - OnePlus 7T (hotdogb)"
+echo "🚀 Complete Bootable Build Script with KernelSU - OnePlus 7T"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
+
+# 🕒 Local TimeZone Setup
+sudo rm -f /etc/localtime
+sudo ln -s /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
+
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
-echo "🧹 Cleaning local manifests..."
-rm -rf .repo/local_manifests
+echo "🧹 Clearing previous build artifacts and directories..."
+rm -rf out/
+rm -rf .repo/local_manifests || true
+rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
-echo "📥 Initializing repo..."
-repo init --no-repo-verify --git-lfs \
-  -u https://github.com/ProjectInfinity-X/manifest \
-  -b 16 \
-  -g default,-mips,-darwin,-notdefault \
-  --depth 1
+echo "📥 Initializing repo for Project Infinity-X..."
+repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 16 --git-lfs || true
 
-echo "📥 Cloning local manifest..."
-git clone --depth 1 -b infinity \
-  https://github.com/jhaidh277/hotdogb_local_manifest \
-  .repo/local_manifests
+echo "📥 Creating local manifest..."
+mkdir -p .repo/local_manifests
+cat << 'EOF' > .repo/local_manifests/roomservice.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
+  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
+  <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
+  <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
+  <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
+  <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
+</manifest>
+EOF
 
-# ================================
-# Sync sources
-# ================================
-echo ">>> Syncing sources"
-if [[ -f /opt/crave/resync.sh ]]; then
-    echo "Using Crave resync script..."
-    /opt/crave/resync.sh
-else
-    echo "Crave resync not found – falling back to repo sync..."
-    repo sync -c --force-sync --no-tags --no-clone-bundle --force-remove-dirty
+echo "🔄 Syncing sources via Crave resync..."
+/opt/crave/resync.sh || echo "⚠️ Crave resync completed with warnings..."
+
+# ============================================================
+# 🧬 KernelSU Integration (Clean Setup)
+# ============================================================
+echo "🧬 Patching KernelSU into Kernel Source..."
+if [ -d "kernel/oneplus/sm8150" ]; then
+    cd kernel/oneplus/sm8150
+    curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash - || true
+    
+    # Enable KernelSU configs in defconfig
+    find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
+        sed -i '/CONFIG_KSU/d' "$defconfig" || true
+        echo "CONFIG_KSU=y" >> "$defconfig"
+        echo "CONFIG_KSU_OVERLAYFS_ON_KSU=y" >> "$defconfig"
+    done
+    cd "$MAIN_DIR"
 fi
 
-# ------------------------------------------------------------
-# 🩹 FIX: Remove duplicate protobuf modules from hardware/lineage/compat
-# ------------------------------------------------------------
-BP1="hardware/lineage/compat/Android.bp"
-if [[ -f "$BP1" ]]; then
-  echo "🩹 Removing duplicate protobuf modules from $BP1..."
-  awk '
-  BEGIN { skip = 0 }
-  /name: "prebuilt_libprotobuf-cpp-(full|lite)-(3\.9\.1|21\.12)-vendorcompat"/ {
-      skip = 1
-      next
-  }
-  skip && /^[[:space:]]*}/ {
-      skip = 0
-      next
-  }
-  !skip { print }
-  ' "$BP1" > "${BP1}.tmp" && mv "${BP1}.tmp" "$BP1"
-  echo "✅ Protobuf modules cleaned."
-else
-  echo "⚠️ $BP1 not found, skipping protobuf fix."
+# ============================================================
+# 📥 SAFE GIT CLONE: hardware/dolby
+# ============================================================
+echo "📥 Cloning hardware_dolby_lunaris..."
+rm -rf hardware/dolby || true
+git clone --depth=1 https://github.com/jhaidh277/hardware_dolby_lunaris.git -b 16 hardware/dolby
+
+# ============================================================
+# 🛡️ VENDOR NAMESPACE FIX
+# ============================================================
+echo "🛡️ Fixing vendor namespace conflicts..."
+rm -f vendor/oneplus/hotdogb/Android.bp || true
+rm -f vendor/oneplus/sm8150-common/Android.bp || true
+
+VENDOR_MAKEFILE="vendor/oneplus/hotdogb/hotdogb-vendor.mk"
+if [ ! -f "$VENDOR_MAKEFILE" ] && [ -d "vendor/oneplus/hotdogb" ]; then
+    echo "⚠️ hotdogb-vendor.mk missing. Creating fallback."
+    touch "$VENDOR_MAKEFILE"
 fi
 
-# KernelSU
-if [[ -d kernel/oneplus/sm8150 ]]; then
-  echo "🧬 Enabling KernelSU in defconfigs..."
-  find kernel/oneplus/sm8150/arch/arm64/configs -type f -name "*defconfig" -print0 |
-  while IFS= read -r -d '' defconfig; do
-    sed -i '/CONFIG_KERNELSU/d' "$defconfig"
-    echo "CONFIG_KERNELSU=y" >> "$defconfig"
-  done
-  echo "✅ KernelSU enabled in defconfigs."
+# ============================================================
+# 🩹 SELINUX PERMISSIVE FIX (বুটলোপ ও ক্র্যাশ ঠেকানোর জন্য)
+# ============================================================
+BOARD_COMMON="device/oneplus/sm8150-common/BoardConfigCommon.mk"
+if [ -f "$BOARD_COMMON" ]; then
+    echo "🩹 Setting SELinux to Permissive..."
+    grep -q "androidboot.selinux=permissive" "$BOARD_COMMON" || echo 'BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive' >> "$BOARD_COMMON"
 fi
 
-echo "📦 Sourcing build environment..."
+rm -f device/oneplus/hotdogb/vendorsetup.sh 2>/dev/null || true
+rm -f device/oneplus/sm8150-common/vendorsetup.sh 2>/dev/null || true
+
+export BUILD_USERNAME=Jihad
+export BUILD_HOSTNAME=crave
+
+echo "📦 Sourcing build/envsetup.sh..."
 source build/envsetup.sh
 
-# Optional: remove Calendar from GSI product
-if [[ -f build/make/target/product/gsi/Android.bp ]]; then
-  sed -i "/Calendar/d" build/make/target/product/gsi/Android.bp || true
+echo "🍽️ Lunching target..."
+if lunch infinity_hotdogb-userdebug; then
+    echo "✅ Lunched infinity_hotdogb-userdebug"
+elif lunch lineage_hotdogb-userdebug; then
+    echo "✅ Lunched lineage_hotdogb-userdebug"
+elif lunch hotdogb-userdebug; then
+    echo "✅ Lunched hotdogb-userdebug"
+else
+    echo "❌ All lunch targets failed."
+    exit 1
 fi
 
-echo "🍽️ Lunching target..."
-lunch infinity_hotdogb-userdebug
+echo "🧹 Running installclean..."
+make installclean || true
 
-echo "🧹 installclean..."
-make installclean
-
-echo "🏗️ Building (m bacon)..."
+echo "🏗️ Building ROM..."
 m bacon
-
-echo "=========================================================="
-echo "✅ Build finished."
-echo "=========================================================="
