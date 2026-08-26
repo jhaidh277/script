@@ -2,21 +2,19 @@
 set -e
 
 echo "=========================================================="
-echo "🚀 Complete Bootable Build Script with KernelSU - OnePlus 7T"
+echo "🚀 Complete & Stable Build Script - OnePlus 7T (hotdogb)"
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
 
 # 🕒 Local TimeZone Setup
-sudo rm -f /etc/localtime
 sudo ln -s /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
 
 export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
-echo "🧹 Clearing previous build artifacts and directories..."
-rm -rf out/
+echo "🧹 Cleaning previous build artifacts..."
 rm -rf .repo/local_manifests || true
 rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus hardware/dolby || true
 
@@ -41,14 +39,25 @@ echo "🔄 Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync completed with warnings..."
 
 # ============================================================
-# 🧬 KernelSU Integration (Clean Setup)
+# 🩹 CRITICAL FIX: WfdCommon Dependency Patch
 # ============================================================
-echo "🧬 Patching KernelSU into Kernel Source..."
+echo "🩹 Purging WfdCommon reference from frameworks/base..."
+if [ -f "frameworks/base/boot/Android.bp" ]; then
+    sed -i '/"WfdCommon",/d' frameworks/base/boot/Android.bp || true
+    sed -i '/"WfdCommon"/d' frameworks/base/boot/Android.bp || true
+fi
+
+# ============================================================
+# 🧬 KernelSU Integration & Safe Defconfig Patch
+# ============================================================
+echo "🧬 Enabling KernelSU in crDroid Kernel Source..."
 if [ -d "kernel/oneplus/sm8150" ]; then
     cd kernel/oneplus/sm8150
+    
+    # Run KSU setup (skip silently if pre-patched)
     curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash - || true
     
-    # Enable KernelSU configs in defconfig
+    # Enable KSU flags across defconfigs
     find arch/arm64/configs/ -type f -name "*defconfig" | while read -r defconfig; do
         sed -i '/CONFIG_KSU/d' "$defconfig" || true
         echo "CONFIG_KSU=y" >> "$defconfig"
