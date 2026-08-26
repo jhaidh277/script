@@ -28,7 +28,7 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="infinity" />
-  <project name="jhaidh277/device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="16" />
+ <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
   <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
   <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
