@@ -23,11 +23,19 @@ rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdog
 # ৩. RisingOS Repo initialization (seventeen branch)
 repo init --no-repo-verify --git-lfs -u https://github.com/RisingOS-Revived/android -b seventeen -g default,-mips,-darwin,-notdefault --depth 1 || true
 
-# ৪. Directory structure নিশ্চিত করা
-mkdir -p .repo/repo/hooks || true
-
-# ৫. Local manifest clone
-git clone https://github.com/jhaidh277/hotdogb_local_manifest --depth 1 -b infinity .repo/local_manifests || true
+echo "📥 Creating local manifest..."
+mkdir -p .repo/local_manifests
+cat << 'EOF' > .repo/local_manifests/roomservice.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="rising" />
+  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
+  <project name="jhaidh277/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="16.0" />
+  <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
+  <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
+  <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
+</manifest>
+EOF
 
 # ৬. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
