@@ -17,6 +17,9 @@ export SKIP_VENDORSETUP=true
 
 echo "🧹 Cleaning previous build directories..."
 rm -rf .repo/local_manifests || true
+rm -rf out/target/product/hotdogb
+rm -rf device/oneplus/hotdogb
+rm -rf vendor/oneplus/hotdogb
 rm -rf device/xiaomi/beryl vendor/xiaomi/beryl device/xiaomi/beryl-kernel hardware/xiaomi hardware/mediatek device/mediatek/sepolicy_vndr vendor/mediatek/ims packages/apps/RevampedFMRadio || true
 
 echo "📥 Initializing repo for Project Infinity-X (Android 16)..."
