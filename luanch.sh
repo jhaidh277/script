@@ -18,8 +18,9 @@ export SKIP_VENDORSETUP=true
 # আগের করাপ্টেড ডিরেক্টরি এবং কনফ্লিক্ট ফোর্স ক্লিন
 echo "Force cleaning corrupted directories and conflicting git hooks..."
 rm -rf .repo/local_manifests || true
-rm -rf device/oneplus/hotdogb device/oneplus/sm8150-common vendor/oneplus/hotdogb vendor/oneplus/sm8150-common kernel/oneplus/sm8150 hardware/oplus || true
-
+rm -rf out/target/product/hotdogb
+rm -rf device/oneplus/hotdogb
+rm -rf vendor/oneplus/hotdogb
 # ৩. RisingOS Repo initialization (seventeen branch)
 repo init --no-repo-verify --git-lfs -u https://github.com/RisingOS-Revived/android -b seventeen -g default,-mips,-darwin,-notdefault --depth 1 || true
 
