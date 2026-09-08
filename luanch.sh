@@ -42,6 +42,10 @@ EOF
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
+# 🛠️ Rust Module Conflict Fix (ডুপ্লিকেট মডিউল ফিক্স করার জন্য প্রি-বিল্ড রিমুভ)
+echo "🛠️ Removing conflicting rust crates to prevent 'already defined' errors..."
+rm -rf external/rust/android-crates-io || true
+
 # hardware/lineage/compat/Android.bp এর ডুপ্লিকেট মডিউল ফিক্স করার জন্য sed কমান্ড
 if [ -f "hardware/lineage/compat/Android.bp" ]; then
     echo "🛠️ Fixing duplicate modules in hardware/lineage/compat/Android.bp..."
