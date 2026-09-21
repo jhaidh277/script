@@ -30,25 +30,23 @@ mkdir -p .repo/local_manifests
 cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
-  <!-- আপনার আগের ডিভাইস এবং ভেন্ডর প্রজেক্টগুলো এখানে থাকবে -->
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="lineage-23.2" />
   <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
   <project name="crdroidandroid/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="17.0" />
   <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
   <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
   <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
-
-  <!-- রস্ট এবং প্যাকেট জেনারেটর ডিপেন্ডেন্সি ফিক্স করার জন্য অতিরিক্ত প্রজেক্ট -->
   <project name="LineageOS/android_packages_modules_Bluetooth" path="packages/modules/Bluetooth" remote="github" revision="lineage-23.2" />
   <project name="LineageOS/android_packages_modules_Nfc" path="packages/modules/Nfc" remote="github" revision="lineage-23.2" />
   <project name="LineageOS/android_packages_modules_Uwb" path="packages/modules/Uwb" remote="github" revision="lineage-23.2" />
 </manifest>
+EOF
 
 # ২. Crave Official Source Sync
 echo "Syncing sources via Crave resync..."
 /opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
 
-# 🛠️ Rust Module Conflict Fix (ডুপ্লিকেট মডিউল ফিক্স করার জন্য প্রি-বিল্ড রিমুভ)
+# 🛠️ Rust Module Conflict Fix
 echo "🛠️ Removing conflicting rust crates to prevent 'already defined' errors..."
 rm -rf external/rust/android-crates-io || true
 
@@ -60,9 +58,8 @@ echo "🔑 Generating private keys..."
 gk -s || true
 
 # ৫. AxionOS Device Lunch Command
-# ফরম্যাট: axion <codename> <build_type> <gms_variant>
 echo "⚙️ Configuring build environment for hotdogb (userdebug, gms)..."
-axion hotdogb userdebug core
+axion hotdogb userdebug gms
 
 # ৬. Final Compilation using AxionOS 'ax' command
 echo "🔥 Starting AxionOS compilation..."
