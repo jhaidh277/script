@@ -15,6 +15,11 @@ echo "⚠️ Skipping ccache configuration as it is not present in container..."
 # vendorsetup.sh এর লুপ এবং ঝামেলা বন্ধ করা
 export SKIP_VENDORSETUP=true
 
+# গিট নেটওয়ার্ক এবং বাফার সাইজ বৃদ্ধি করা (বড় প্রজেক্ট সিংক ত্রুটি রোধ করতে)
+git config --global http.postBuffer 524288000
+git config --global http.lowSpeedLimit 0
+git config --global http.lowSpeedTime 999999
+
 # আগের করাপ্টেড ডিরেক্টরি এবং কনফ্লিক্ট ফোর্স ক্লিন
 echo "Force cleaning corrupted directories and conflicting git hooks..."
 rm -rf .repo/local_manifests || true
@@ -25,33 +30,57 @@ rm -rf vendor/oneplus/hotdogb
 # ১. AxionOS Repo initialization (lineage-23.2 branch)
 repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth 1 || true
 
-echo "📥 Creating local manifest with tools/pdl fix..."
+echo "📥 Creating local manifest..."
 mkdir -p .repo/local_manifests
 cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
+  <!-- Device tree for hotdogb (your fork - axion branch) -->
   <project name="jhaidh277/android_device_oneplus_hotdogb" path="device/oneplus/hotdogb" remote="github" revision="axion" />
-  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="lineage-23.2" />
-  <project name="crdroidandroid/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="17.0" />
-  <project path="vendor/oneplus/hotdogb" name="TheMuppets/proprietary_vendor_oneplus_hotdogb" remote="github" revision="lineage-23.2" />
-  <project path="vendor/oneplus/sm8150-common" name="TheMuppets/proprietary_vendor_oneplus_sm8150-common" remote="github" revision="lineage-23.2" />
-  <project path="hardware/oplus" name="LineageOS/android_hardware_oplus" remote="github" revision="lineage-23.2" />
 
-  <!-- PDL জেনারেটর এবং পাইথন/রস্ট ডিফিনিশনের মূল প্রজেক্ট -->
-  <project name="LineageOS/android_tools_pdl" path="tools/pdl" remote="github" revision="lineage-23.2" />
+  <!-- Common device tree (your fork - axion branch) -->
+  <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="axion" />
+
+  <!-- Kernel for sm8150 -->
+  <project name="crdroidandroid/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="17.0" />
+  
+  <!-- Vendor blobs for hotdogb (lineage-24.0) -->
+  <project
+      path="vendor/oneplus/hotdogb"
+      name="TheMuppets/proprietary_vendor_oneplus_hotdogb"
+      remote="github"
+      revision="lineage-24.0" />
+
+   <!-- Common vendor blobs (lineage-24.0) -->
+  <project
+      path="vendor/oneplus/sm8150-common"
+      name="TheMuppets/proprietary_vendor_oneplus_sm8150-common"
+      remote="github"
+      revision="lineage-24.0" />
+  
+  <!-- OnePlus hardware -->
+  <project
+      path="hardware/oplus"
+      name="LineageOS/android_hardware_oplus"
+      remote="github"
+      revision="lineage-24.0" />
 </manifest>
 EOF
 
-# ২. Crave Official Source Sync
-echo "Syncing sources via Crave resync..."
-/opt/crave/resync.sh || echo "⚠️ Crave resync flagged an issue, but proceeding anyway..."
+# ২. Crave Official Source Sync (অটো-রিট্রাই লুপসহ, যাতে নেটওয়ার্ক ড্রপ করলে ফেইল না করে)
+echo "Syncing sources via Crave resync with retry loop..."
+until /opt/crave/resync.sh; do
+    echo "⚠️ Crave resync flagged an issue. Retrying in 10 seconds..."
+    sleep 10
+done
 
 # 🛠️ Rust Module Conflict Fix
 echo "🛠️ Removing conflicting rust crates to prevent 'already defined' errors..."
 rm -rf external/rust/android-crates-io || true
 
 # ৩. Environment setup
-. build/envsetup.sh || true
+echo "Setting up build environment..."
+source build/envsetup.sh || true
 
 # ৪. Private Keys Generation (AxionOS requires gk -s once)
 echo "🔑 Generating private keys..."
