@@ -15,7 +15,7 @@ echo "⚠️ Skipping ccache configuration as it is not present in container..."
 # vendorsetup.sh এর লুপ এবং ঝামেলা বন্ধ করা
 export SKIP_VENDORSETUP=true
 
-# গিট নেটওয়ার্ক এবং বাফার সাইজ বৃদ্ধি করা (বড় প্রজেক্ট সিংক ত্রুটি রোধ করতে)
+# গিট নেটওয়ার্ক এবং বাফার সাইজ বৃদ্ধি করা (বড় প্রজেক্ট সিংক ত্রুটি রোধ করতে)
 git config --global http.postBuffer 524288000
 git config --global http.lowSpeedLimit 0
 git config --global http.lowSpeedTime 999999
@@ -30,7 +30,7 @@ rm -rf vendor/oneplus/hotdogb
 # ১. AxionOS Repo initialization (lineage-23.2 branch)
 repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth 1 || true
 
-echo "📥 Creating local manifest..."
+echo "📥 Creating local manifest with sepolicy fix..."
 mkdir -p .repo/local_manifests
 cat << 'EOF' > .repo/local_manifests/roomservice.xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -40,6 +40,9 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
 
   <!-- Common device tree (your fork - axion branch) -->
   <project name="jhaidh277/android_device_oneplus_sm8150-common" path="device/oneplus/sm8150-common" remote="github" revision="axion" />
+
+  <!-- LineageOS SePolicy -->
+  <project name="LineageOS/android_device_lineage_sepolicy" path="device/lineage/sepolicy" remote="github" revision="lineage-23.2" />
 
   <!-- Kernel for sm8150 -->
   <project name="crdroidandroid/android_kernel_oneplus_sm8150" path="kernel/oneplus/sm8150" remote="github" revision="17.0" />
@@ -67,12 +70,18 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
 </manifest>
 EOF
 
-# ২. Crave Official Source Sync (অটো-রিট্রাই লুপসহ, যাতে নেটওয়ার্ক ড্রপ করলে ফেইল না করে)
+# ২. Crave Official Source Sync (অটো-রিট্রাই লুপসহ)
 echo "Syncing sources via Crave resync with retry loop..."
 until /opt/crave/resync.sh; do
     echo "⚠️ Crave resync flagged an issue. Retrying in 10 seconds..."
     sleep 10
 done
+
+# 🛠️ Fix missing libion sepolicy.mk error in common board config
+if [ -f "device/oneplus/sm8150-common/BoardConfigCommon.mk" ]; then
+    echo "🛠️ Fixing missing libion sepolicy include..."
+    sed -i '/libion\/sepolicy.mk/d' device/oneplus/sm8150-common/BoardConfigCommon.mk || true
+fi
 
 # 🛠️ Rust Module Conflict Fix
 echo "🛠️ Removing conflicting rust crates to prevent 'already defined' errors..."
