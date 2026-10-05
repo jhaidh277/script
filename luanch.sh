@@ -28,8 +28,8 @@ rm -rf vendor/oneplus/sm8150-common
 # ২. AxionOS Repo initialization
 repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth 1 || true
 
-# ৩. বিল্ড সিস্টেম অটো-ফেচ করার আগেই ম্যানুয়ালি সঠিক ব্রাঞ্চ থেকে ক্লোন করে নেওয়া (সবচেয়ে গুরুত্বপূর্ণ ধাপ)
-echo "📥 Pre-cloning device trees and dependencies to prevent auto-fetch errors..."
+# ৩. প্রি-ক্লোনিং (ভেন্ডর ব্রাঞ্চ lineage-23.2 এ আপডেট করা হলো যাতে hotdogb-vendor.mk এরর না আসে)
+echo "📥 Pre-cloning device trees and dependencies..."
 mkdir -p device/oneplus
 mkdir -p vendor/oneplus
 mkdir -p kernel/oneplus
@@ -44,27 +44,27 @@ git clone https://github.com/jhaidh277/android_device_oneplus_sm8150-common -b a
 # Kernel
 git clone https://github.com/crdroidandroid/android_kernel_oneplus_sm8150 -b 17.0 kernel/oneplus/sm8150
 
-# Vendor blobs
-git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_hotdogb -b lineage-24.0 vendor/oneplus/hotdogb
-git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_sm8150-common -b lineage-24.0 vendor/oneplus/sm8150-common
+# Vendor blobs (lineage-23.2 branch দিয়ে ম্যাচ করানো হলো)
+git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_hotdogb -b lineage-23.2 vendor/oneplus/hotdogb
+git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_sm8150-common -b lineage-23.2 vendor/oneplus/sm8150-common
 
 # Hardware oplus
-git clone https://github.com/LineageOS/android_hardware_oplus -b lineage-24.0 hardware/oplus
+git clone https://github.com/LineageOS/android_hardware_oplus -b lineage-23.2 hardware/oplus
 
-# ৪. Crave Official Source Sync (বাকি রিমেইনিং সোর্সের জন্য)
+# ৪. Crave Official Source Sync
 echo "Syncing remaining sources via Crave resync..."
 until /opt/crave/resync.sh; do
     echo "⚠️ Crave resync flagged an issue. Retrying in 10 seconds..."
     sleep 10
 done
 
-# ৫. BoardConfig সেপোলিসি ফিক্স (Missing libion sepolicy.mk error fix)
+# ৫. BoardConfig সেপোলিসি ফিক্স
 if [ -f "device/oneplus/sm8150-common/BoardConfigCommon.mk" ]; then
     echo "🛠️ Fixing missing libion sepolicy include in BoardConfigCommon.mk..."
     sed -i '/libion\/sepolicy.mk/d' device/oneplus/sm8150-common/BoardConfigCommon.mk || true
 fi
 
-# ৬. ফিক্স: রাস্ট মডিউল কনফ্লিক্ট দূর করা
+# ৬. রাস্ট মডিউল কনফ্লিক্ট দূর করা
 echo "🛠️ Removing conflicting rust crates..."
 rm -rf external/rust/android-crates-io || true
 
