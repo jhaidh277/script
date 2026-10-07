@@ -34,6 +34,7 @@ mkdir -p device/oneplus
 mkdir -p vendor/oneplus
 mkdir -p kernel/oneplus
 mkdir -p hardware
+mkdir -p system/tools
 
 # Device tree (axion branch)
 git clone https://github.com/jhaidh277/android_device_oneplus_hotdogb -b axion device/oneplus/hotdogb
@@ -50,6 +51,9 @@ git clone https://github.com/TheMuppets/proprietary_vendor_oneplus_sm8150-common
 
 # Hardware oplus
 git clone https://github.com/LineageOS/android_hardware_oplus -b lineage-23.2 hardware/oplus
+
+# PDL Tools (মডিউল মিসিং এরর স্থায়ীভাবে দূর করতে সরাসরি ক্লোন)
+git clone https://github.com/AxionAOSP/android_system_tools_pdl -b lineage-23.2 system/tools/pdl || git clone https://github.com/LineageOS/android_system_tools_pdl -b lineage-23.2 system/tools/pdl || true
 
 # ৪. Crave Official Source Sync
 echo "Syncing remaining sources via Crave resync..."
@@ -80,7 +84,7 @@ source build/envsetup.sh || true
 echo "🔑 Generating private keys..."
 gk -s || true
 
-# ১০. AxionOS ডিভাইস লাঞ্চ কমান্ড
+# ১০. AxionOS ডিভাইস লাunch কমান্ড
 echo "⚙️ Configuring build environment for hotdogb (userdebug, gms)..."
 axion hotdogb userdebug gms
 
