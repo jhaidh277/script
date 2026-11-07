@@ -10,10 +10,6 @@ export USE_CCACHE=0
 export NOMINATIVE_CCACHE=1
 export SKIP_VENDORSETUP=true
 
-git config --global http.postBuffer 524288000
-git config --global http.lowSpeedLimit 0
-git config --global http.lowSpeedTime 999999
-
 # ১. পুরোনো করাপ্টেড ফাইল এবং সোং ক্যাশ ক্লিন করা
 echo "Cleaning up old manifests, soong cache, and conflicting directories..."
 rm -rf .repo/local_manifests || true
