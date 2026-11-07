@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo "🚀 Starting Permanent AxionOS Build Script with PDL Fix"
+echo "🚀 Starting Permanent AxionOS Build
 echo "=========================================================="
 
 MAIN_DIR=$(pwd)
@@ -19,7 +19,7 @@ echo "Cleaning up old manifests, soong cache, and conflicting directories..."
 rm -rf .repo/local_manifests || true
 
 # ২. AxionOS Repo initialization
-repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth 1 || true
+repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth 1 
 
 # ৩. স্থায়ী লোকাল ম্যানিফেস্ট তৈরি (ডিভাইস, ভেন্ডর ও অন্যান্য ডিপেন্ডেন্সির জন্য)
 echo "📥 Creating permanent local manifest for device, vendor, and tools..."
@@ -44,11 +44,6 @@ cat << 'EOF' > .repo/local_manifests/roomservice.xml
 </manifest>
 EOF
 
-# ৪. স্থায়ী ফিক্স: ম্যানুয়ালি system/tools/pdl পিন করে দেওয়া যাতে সোং বুটস্ট্রাপে কোনো এরর না আসে
-echo "🛠️ Ensuring system/tools/pdl is correctly placed..."
-mkdir -p system/tools
-rm -rf system/tools/pdl
-git clone https://github.com/AxionAOSP/android_system_tools_pdl -b lineage-23.2 system/tools/pdl || git clone https://github.com/LineageOS/android_system_tools_pdl -b lineage-23.2 system/tools/pdl || true
 
 # ৫. Crave Official Source Sync
 echo "Syncing all sources via Crave resync..."
@@ -56,13 +51,6 @@ echo "Syncing all sources via Crave resync..."
     echo "⚠️ Crave resync encountered an issue. Retrying in 10 seconds..."
     sleep 10
 done
-
-# ৬. অতিরিক্ত সুরক্ষা: সিংক হওয়ার পরেও যদি pdl ফোল্ডার মুছে যায়, তবে পুনরায় ক্লোন করা
-if [ ! -d "system/tools/pdl" ]; then
-    echo "📥 Re-cloning system/tools/pdl post-sync..."
-    mkdir -p system/tools/pdl
-    git clone https://github.com/AxionAOSP/android_system_tools_pdl -b lineage-23.2 system/tools/pdl || git clone https://github.com/LineageOS/android_system_tools_pdl -b lineage-23.2 system/tools/pdl || true
-fi
 
 # ৭. BoardConfig সেপোলিসি ফিক্স
 if [ -f "device/oneplus/sm8150-common/BoardConfigCommon.mk" ]; then
